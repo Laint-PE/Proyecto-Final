@@ -64,9 +64,6 @@ public class MenuConsultasController {
     // ---------- Preparación de tablas (sentencias fijas: Statement) ----------
 
     private static void prepararTablas(Connection conexion) throws SQLException {
-        // Las claves foráneas de CONSULTAS necesitan que estas tablas existan primero.
-        AnimalesJDBCController.crearTabla(conexion);
-        AnimalesJDBCController.insertarEjemplosSiVacia(conexion);
         EmpleadosJDBCController.crearTabla(conexion);
         EmpleadosJDBCController.insertarEjemplosSiVacia(conexion);
         asegurarColumnaDisponible(conexion);
