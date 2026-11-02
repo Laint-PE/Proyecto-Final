@@ -1,6 +1,5 @@
 package views;
 
-import controllers.AnimalesJDBCController;
 import controllers.EmpleadosJDBCController;
 import controllers.MenuConsultasController;
 
@@ -9,6 +8,7 @@ import java.util.Scanner;
 public class MainView {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
+        AnimalView animalView = new AnimalView(scanner);
         ProductoView productoView = new ProductoView(scanner);
         int opcion = 0;
 
@@ -31,7 +31,7 @@ public class MainView {
 
             switch (opcion) {
                 case 1:
-                    AnimalesJDBCController.administrarAnimales(scanner);
+                    animalView.iniciar();
                     break;
                 case 2:
                     productoView.iniciar();
