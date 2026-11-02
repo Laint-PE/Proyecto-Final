@@ -1,6 +1,9 @@
 package services;
 
 
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Types;
 import java.util.Scanner;
 
 public class UtilidadesService {
@@ -73,12 +76,36 @@ public class UtilidadesService {
         }
     }
 
-    // Convierte un texto a literal SQL seguro: 'texto'
-    public static String textoSql(String valor) {
-        return "'" + valor.replace("\\", "\\\\").replace("'", "''") + "'";
+
+    public static void setStringONull(PreparedStatement ps, int posicion, String valor) throws SQLException {
+        if (valor == null) {
+            ps.setNull(posicion, Types.VARCHAR);
+        } else {
+            ps.setString(posicion, valor);
+        }
     }
 
-    public static String numeroBooleano(boolean valor) {
-        return valor ? "1" : "0";
+    public static void setDoubleONull(PreparedStatement ps, int posicion, Double valor) throws SQLException {
+        if (valor == null) {
+            ps.setNull(posicion, Types.DOUBLE);
+        } else {
+            ps.setDouble(posicion, valor);
+        }
+    }
+
+    public static void setIntONull(PreparedStatement ps, int posicion, Integer valor) throws SQLException {
+        if (valor == null) {
+            ps.setNull(posicion, Types.INTEGER);
+        } else {
+            ps.setInt(posicion, valor);
+        }
+    }
+
+    public static void setBooleanONull(PreparedStatement ps, int posicion, Boolean valor) throws SQLException {
+        if (valor == null) {
+            ps.setNull(posicion, Types.TINYINT);
+        } else {
+            ps.setInt(posicion, valor ? 1 : 0);
+        }
     }
 }

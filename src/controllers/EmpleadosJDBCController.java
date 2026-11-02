@@ -78,6 +78,7 @@ public class EmpleadosJDBCController {
         String sql = "INSERT INTO EMPLEADOS (id_empleado, nombre, apellido, cargo, sueldo, "
                 + "fecha_contratacion, telefono, email, activo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
+        // Un mismo PreparedStatement se reutiliza cambiando los parámetros (PPT 11: "Reutilizar").
         try (PreparedStatement ps = conexion.prepareStatement(sql)) {
             insertarFila(ps, "EMP001", "Carlos", "Gómez", "Veterinario", 2500.00, "2023-01-15", "987654321", "carlos.gomez@veterinaria.pe", true);
             insertarFila(ps, "EMP002", "Ana", "Torres", "Recepcionista", 1500.00, "2023-05-10", "912345678", "ana.torres@veterinaria.pe", true);
@@ -88,6 +89,7 @@ public class EmpleadosJDBCController {
         System.out.println("Se cargaron cinco empleados de ejemplo.");
     }
 
+    // Asigna los 9 parámetros en el mismo orden de los signos ? y ejecuta.
     private static int insertarFila(PreparedStatement ps, String id, String nombre, String apellido,
                                     String cargo, double sueldo, String fecha, String telefono,
                                     String email, boolean activo) throws SQLException {
@@ -129,6 +131,7 @@ public class EmpleadosJDBCController {
         }
     }
 
+    // SELECT sin parámetros: Statement es suficiente (no hay datos del usuario).
     private static void listarEmpleados(Connection conexion) throws SQLException {
         boolean encontrado = false;
         try (Statement sentencia = conexion.createStatement();
@@ -180,6 +183,7 @@ public class EmpleadosJDBCController {
                 + "telefono = ?, email = ?, activo = ? WHERE id_empleado = ?";
 
         try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+            // Primero los nuevos valores, y al final el parámetro del WHERE.
             ps.setString(1, nombre);
             ps.setString(2, apellido);
             ps.setString(3, cargo);

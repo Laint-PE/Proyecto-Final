@@ -4,12 +4,21 @@ import services.ConexionBDService;
 import services.UtilidadesService;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Scanner;
 
 public class AnimalesJDBCController {
+
+    private static final String SQL_INSERT = "INSERT INTO ANIMALES (codigo, tipo_animal, raza, nombre, edad, peso, "
+            + "sexo, nombre_dueno, pedigri, tipo_pelaje, requiere_bozal, nivel_adiestramiento, "
+            + "requiere_transportadora, temperamento) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+    private static final String SQL_UPDATE = "UPDATE ANIMALES SET tipo_animal = ?, raza = ?, nombre = ?, edad = ?, "
+            + "peso = ?, sexo = ?, nombre_dueno = ?, pedigri = ?, tipo_pelaje = ?, requiere_bozal = ?, "
+            + "nivel_adiestramiento = ?, requiere_transportadora = ?, temperamento = ? WHERE codigo = ?";
 
     public static void main(String[] args) {
         try (Scanner scanner = new Scanner(System.in)) {
@@ -81,22 +90,77 @@ public class AnimalesJDBCController {
             }
         }
 
-        if (cantidad == 0) {
-            try (Statement sentencia = conexion.createStatement()) {
-                sentencia.executeUpdate("INSERT INTO ANIMALES "
-                        + "(codigo, tipo_animal, raza, nombre, edad, peso, sexo, nombre_dueno, pedigri, tipo_pelaje, requiere_bozal, nivel_adiestramiento) VALUES ("
-                        + "'ANM001', 'Perro', 'Labrador', 'Simba', 3, 25.5, 'Macho', 'Carlos Díaz', 1, 'Corto', 0, 'Intermedio')");
-
-                sentencia.executeUpdate("INSERT INTO ANIMALES "
-                        + "(codigo, tipo_animal, raza, nombre, edad, peso, sexo, nombre_dueno, pedigri, tipo_pelaje, requiere_transportadora, temperamento) VALUES ("
-                        + "'ANM002', 'Gato', 'Persa', 'Luna', 2, 4.2, 'Hembra', 'Ana Torres', 0, 'Largo', 1, 'Tranquilo')");
-
-                sentencia.executeUpdate("INSERT INTO ANIMALES "
-                        + "(codigo, tipo_animal, raza, nombre, edad, peso, sexo, nombre_dueno, pedigri, tipo_pelaje, requiere_bozal, nivel_adiestramiento) VALUES ("
-                        + "'ANM003', 'Perro', 'Mestizo', 'Max', 5, 18.0, 'Macho', 'Jorge Silva', 0, 'Medio', 1, 'Básico')");
-            }
-            System.out.println("Se cargaron tres animales de ejemplo.");
+        if (cantidad > 0) {
+            return;
         }
+
+        try (PreparedStatement ps = conexion.prepareStatement(SQL_INSERT)) {
+            insertarAnimal(ps, perroEjemplo("ANM001", "Labrador", "Simba", 3, 25.5, "Macho", "Carlos Díaz", true, "Corto", false, "Intermedio"));
+            insertarAnimal(ps, gatoEjemplo("ANM002", "Persa", "Luna", 2, 4.2, "Hembra", "Ana Torres", false, "Largo", true, "Tranquilo"));
+            insertarAnimal(ps, perroEjemplo("ANM003", "Mestizo", "Max", 5, 18.0, "Macho", "Jorge Silva", false, "Medio", true, "Básico"));
+        }
+        System.out.println("Se cargaron tres animales de ejemplo.");
+    }
+
+    private static DatosAnimal perroEjemplo(String codigo, String raza, String nombre, int edad, double peso,
+                                            String sexo, String dueno, boolean pedigri, String pelaje,
+                                            boolean bozal, String adiestramiento) {
+        DatosAnimal d = new DatosAnimal();
+        d.codigo = codigo;
+        d.tipo = "Perro";
+        d.raza = raza;
+        d.nombre = nombre;
+        d.edad = edad;
+        d.peso = peso;
+        d.sexo = sexo;
+        d.nombreDueno = dueno;
+        d.pedigri = pedigri;
+        d.tipoPelaje = pelaje;
+        d.requiereBozal = bozal;
+        d.nivelAdiestramiento = adiestramiento;
+        return d;
+    }
+
+    private static DatosAnimal gatoEjemplo(String codigo, String raza, String nombre, int edad, double peso,
+                                           String sexo, String dueno, boolean pedigri, String pelaje,
+                                           boolean transportadora, String temperamento) {
+        DatosAnimal d = new DatosAnimal();
+        d.codigo = codigo;
+        d.tipo = "Gato";
+        d.raza = raza;
+        d.nombre = nombre;
+        d.edad = edad;
+        d.peso = peso;
+        d.sexo = sexo;
+        d.nombreDueno = dueno;
+        d.pedigri = pedigri;
+        d.tipoPelaje = pelaje;
+        d.requiereTransportadora = transportadora;
+        d.temperamento = temperamento;
+        return d;
+    }
+
+    private static int insertarAnimal(PreparedStatement ps, DatosAnimal d) throws SQLException {
+        ps.setString(1, d.codigo);
+        asignarCampos(ps, d, 2);
+        return ps.executeUpdate();
+    }
+
+    private static void asignarCampos(PreparedStatement ps, DatosAnimal d, int inicio) throws SQLException {
+        int i = inicio;
+        ps.setString(i++, d.tipo);
+        ps.setString(i++, d.raza);
+        ps.setString(i++, d.nombre);
+        ps.setInt(i++, d.edad);
+        ps.setDouble(i++, d.peso);
+        ps.setString(i++, d.sexo);
+        ps.setString(i++, d.nombreDueno);
+        ps.setInt(i++, d.pedigri ? 1 : 0);
+        ps.setString(i++, d.tipoPelaje);
+        UtilidadesService.setBooleanONull(ps, i++, d.requiereBozal);
+        UtilidadesService.setStringONull(ps, i++, d.nivelAdiestramiento);
+        UtilidadesService.setBooleanONull(ps, i++, d.requiereTransportadora);
+        UtilidadesService.setStringONull(ps, i, d.temperamento);
     }
 
     private static void registrarAnimal(Connection conexion, Scanner scanner) {
@@ -105,24 +169,8 @@ public class AnimalesJDBCController {
             return;
         }
 
-        String sql = "INSERT INTO ANIMALES (codigo, tipo_animal, raza, nombre, edad, peso, sexo, nombre_dueno, pedigri, "
-                + "tipo_pelaje, requiere_bozal, nivel_adiestramiento, requiere_transportadora, temperamento) VALUES ("
-                + UtilidadesService.textoSql(datos.codigo) + ", "
-                + UtilidadesService.textoSql(datos.tipo) + ", "
-                + UtilidadesService.textoSql(datos.raza) + ", "
-                + UtilidadesService.textoSql(datos.nombre) + ", "
-                + datos.edad + ", " + datos.peso + ", "
-                + UtilidadesService.textoSql(datos.sexo) + ", "
-                + UtilidadesService.textoSql(datos.nombreDueno) + ", "
-                + UtilidadesService.numeroBooleano(datos.pedigri) + ", "
-                + UtilidadesService.textoSql(datos.tipoPelaje) + ", "
-                + datos.requiereBozal + ", "
-                + datos.nivelAdiestramiento + ", "
-                + datos.requiereTransportadora + ", "
-                + datos.temperamento + ")";
-
-        try (Statement sentencia = conexion.createStatement()) {
-            int filas = sentencia.executeUpdate(sql);
+        try (PreparedStatement ps = conexion.prepareStatement(SQL_INSERT)) {
+            int filas = insertarAnimal(ps, datos);
             System.out.println(filas > 0 ? "Animal registrado correctamente." : "No se registró el animal.");
         } catch (SQLException e) {
             if (e.getErrorCode() == 1062) {
@@ -163,21 +211,12 @@ public class AnimalesJDBCController {
         datos.pedigri = UtilidadesService.leerBooleano(scanner, "¿Tiene pedigrí? (s/n): ");
         datos.tipoPelaje = UtilidadesService.leerTextoObligatorio(scanner, "Tipo de pelaje: ");
 
-        datos.requiereBozal = "NULL";
-        datos.nivelAdiestramiento = "NULL";
-        datos.requiereTransportadora = "NULL";
-        datos.temperamento = "NULL";
-
         if (tipoOpcion == 1) {
-            datos.requiereBozal = UtilidadesService.numeroBooleano(
-                    UtilidadesService.leerBooleano(scanner, "¿Requiere bozal en consulta? (s/n): "));
-            datos.nivelAdiestramiento = UtilidadesService.textoSql(
-                    UtilidadesService.leerTexto(scanner, "Nivel de adiestramiento: "));
+            datos.requiereBozal = UtilidadesService.leerBooleano(scanner, "¿Requiere bozal en consulta? (s/n): ");
+            datos.nivelAdiestramiento = UtilidadesService.leerTexto(scanner, "Nivel de adiestramiento: ");
         } else {
-            datos.requiereTransportadora = UtilidadesService.numeroBooleano(
-                    UtilidadesService.leerBooleano(scanner, "¿Requiere transportadora? (s/n): "));
-            datos.temperamento = UtilidadesService.textoSql(
-                    UtilidadesService.leerTexto(scanner, "Temperamento: "));
+            datos.requiereTransportadora = UtilidadesService.leerBooleano(scanner, "¿Requiere transportadora? (s/n): ");
+            datos.temperamento = UtilidadesService.leerTexto(scanner, "Temperamento: ");
         }
         return datos;
     }
@@ -199,27 +238,26 @@ public class AnimalesJDBCController {
 
     private static void buscarAnimal(Connection conexion, Scanner scanner) throws SQLException {
         String codigo = UtilidadesService.leerTextoObligatorio(scanner, "Código del animal: ");
-        String sql = "SELECT * FROM ANIMALES WHERE codigo = " + UtilidadesService.textoSql(codigo);
+        String sql = "SELECT * FROM ANIMALES WHERE codigo = ?";
 
-        try (Statement sentencia = conexion.createStatement();
-             ResultSet resultado = sentencia.executeQuery(sql)) {
-            if (resultado.next()) {
-                mostrarAnimal(resultado);
-            } else {
-                System.out.println("No se encontró un animal con ese código.");
+        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+            ps.setString(1, codigo);
+            try (ResultSet resultado = ps.executeQuery()) {
+                if (resultado.next()) {
+                    mostrarAnimal(resultado);
+                } else {
+                    System.out.println("No se encontró un animal con ese código.");
+                }
             }
         }
     }
 
     private static void actualizarAnimal(Connection conexion, Scanner scanner) throws SQLException {
         String codigo = UtilidadesService.leerTextoObligatorio(scanner, "Código del animal que deseas actualizar: ");
-        try (Statement sentencia = conexion.createStatement();
-             ResultSet resultado = sentencia.executeQuery(
-                     "SELECT codigo FROM ANIMALES WHERE codigo = " + UtilidadesService.textoSql(codigo))) {
-            if (!resultado.next()) {
-                System.out.println("No se encontró un animal con ese código.");
-                return;
-            }
+
+        if (!existeAnimal(conexion, codigo)) {
+            System.out.println("No se encontró un animal con ese código.");
+            return;
         }
 
         DatosAnimal datos = leerDatosAnimal(scanner, codigo);
@@ -227,34 +265,32 @@ public class AnimalesJDBCController {
             return;
         }
 
-        String sql = "UPDATE ANIMALES SET tipo_animal = " + UtilidadesService.textoSql(datos.tipo)
-                + ", raza = " + UtilidadesService.textoSql(datos.raza)
-                + ", nombre = " + UtilidadesService.textoSql(datos.nombre)
-                + ", edad = " + datos.edad
-                + ", peso = " + datos.peso
-                + ", sexo = " + UtilidadesService.textoSql(datos.sexo)
-                + ", nombre_dueno = " + UtilidadesService.textoSql(datos.nombreDueno)
-                + ", pedigri = " + UtilidadesService.numeroBooleano(datos.pedigri)
-                + ", tipo_pelaje = " + UtilidadesService.textoSql(datos.tipoPelaje)
-                + ", requiere_bozal = " + datos.requiereBozal
-                + ", nivel_adiestramiento = " + datos.nivelAdiestramiento
-                + ", requiere_transportadora = " + datos.requiereTransportadora
-                + ", temperamento = " + datos.temperamento
-                + " WHERE codigo = " + UtilidadesService.textoSql(codigo);
-
-        try (Statement sentencia = conexion.createStatement()) {
-            int filas = sentencia.executeUpdate(sql);
+        try (PreparedStatement ps = conexion.prepareStatement(SQL_UPDATE)) {
+            asignarCampos(ps, datos, 1);   // parámetros 1 al 13: nuevos valores
+            ps.setString(14, codigo);      // parámetro 14: condición WHERE
+            int filas = ps.executeUpdate();
             System.out.println(filas > 0 ? "Animal actualizado correctamente." : "No se realizó ningún cambio.");
         }
     }
 
     private static void eliminarAnimal(Connection conexion, Scanner scanner) throws SQLException {
         String codigo = UtilidadesService.leerTextoObligatorio(scanner, "Código del animal que deseas eliminar: ");
-        String sql = "DELETE FROM ANIMALES WHERE codigo = " + UtilidadesService.textoSql(codigo);
+        String sql = "DELETE FROM ANIMALES WHERE codigo = ?";
 
-        try (Statement sentencia = conexion.createStatement()) {
-            int filas = sentencia.executeUpdate(sql);
+        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+            ps.setString(1, codigo);
+            int filas = ps.executeUpdate();
             System.out.println(filas > 0 ? "Animal eliminado correctamente." : "No se encontró un animal con ese código.");
+        }
+    }
+
+    private static boolean existeAnimal(Connection conexion, String codigo) throws SQLException {
+        String sql = "SELECT 1 FROM ANIMALES WHERE codigo = ?";
+        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+            ps.setString(1, codigo);
+            try (ResultSet resultado = ps.executeQuery()) {
+                return resultado.next();
+            }
         }
     }
 
@@ -299,9 +335,9 @@ public class AnimalesJDBCController {
         private String nombreDueno;
         private boolean pedigri;
         private String tipoPelaje;
-        private String requiereBozal;
+        private Boolean requiereBozal;
         private String nivelAdiestramiento;
-        private String requiereTransportadora;
+        private Boolean requiereTransportadora;
         private String temperamento;
     }
 }
