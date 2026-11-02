@@ -4,6 +4,7 @@ import services.ConexionBDService;
 import services.UtilidadesService;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -43,6 +44,7 @@ public class EmpleadosJDBCController {
         }
     }
 
+    // CREATE TABLE no recibe datos del usuario, así que Statement sigue siendo válido aquí.
     private static void crearTabla(Connection conexion) throws SQLException {
         String sql = "CREATE TABLE IF NOT EXISTS EMPLEADOS ("
                 + "id_empleado VARCHAR(50) PRIMARY KEY, "
@@ -69,24 +71,42 @@ public class EmpleadosJDBCController {
             }
         }
 
-        if (cantidad == 0) {
-            String cols = "INSERT INTO EMPLEADOS (id_empleado, nombre, apellido, cargo, sueldo, "
-                    + "fecha_contratacion, telefono, email, activo) VALUES ";
-            try (Statement sentencia = conexion.createStatement()) {
-                sentencia.executeUpdate(cols + "('EMP001', 'Carlos', 'Gómez', 'Veterinario', 2500.00, '2023-01-15', '987654321', 'carlos.gomez@veterinaria.pe', 1)");
-                sentencia.executeUpdate(cols + "('EMP002', 'Ana', 'Torres', 'Recepcionista', 1500.00, '2023-05-10', '912345678', 'ana.torres@veterinaria.pe', 1)");
-                sentencia.executeUpdate(cols + "('EMP003', 'Luis', 'Pérez', 'Asistente', 1200.00, '2024-02-01', '998877665', 'luis.perez@veterinaria.pe', 1)");
-                sentencia.executeUpdate(cols + "('EMP004', 'María', 'Rojas', 'Administradora', 2800.00, '2022-11-01', '976543210', 'maria.rojas@veterinaria.pe', 1)");
-                sentencia.executeUpdate(cols + "('EMP005', 'Jorge', 'Silva', 'Peluquero Canino', 1600.00, '2023-08-20', '954321098', 'jorge.silva@veterinaria.pe', 1)");
-            }
-            System.out.println("Se cargaron cinco empleados de ejemplo.");
+        if (cantidad > 0) {
+            return;
         }
+
+        String sql = "INSERT INTO EMPLEADOS (id_empleado, nombre, apellido, cargo, sueldo, "
+                + "fecha_contratacion, telefono, email, activo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+            insertarFila(ps, "EMP001", "Carlos", "Gómez", "Veterinario", 2500.00, "2023-01-15", "987654321", "carlos.gomez@veterinaria.pe", true);
+            insertarFila(ps, "EMP002", "Ana", "Torres", "Recepcionista", 1500.00, "2023-05-10", "912345678", "ana.torres@veterinaria.pe", true);
+            insertarFila(ps, "EMP003", "Luis", "Pérez", "Asistente", 1200.00, "2024-02-01", "998877665", "luis.perez@veterinaria.pe", true);
+            insertarFila(ps, "EMP004", "María", "Rojas", "Administradora", 2800.00, "2022-11-01", "976543210", "maria.rojas@veterinaria.pe", true);
+            insertarFila(ps, "EMP005", "Jorge", "Silva", "Peluquero Canino", 1600.00, "2023-08-20", "954321098", "jorge.silva@veterinaria.pe", true);
+        }
+        System.out.println("Se cargaron cinco empleados de ejemplo.");
+    }
+
+    private static int insertarFila(PreparedStatement ps, String id, String nombre, String apellido,
+                                    String cargo, double sueldo, String fecha, String telefono,
+                                    String email, boolean activo) throws SQLException {
+        ps.setString(1, id);
+        ps.setString(2, nombre);
+        ps.setString(3, apellido);
+        ps.setString(4, cargo);
+        ps.setDouble(5, sueldo);
+        ps.setString(6, fecha);
+        ps.setString(7, telefono);
+        ps.setString(8, email);
+        ps.setInt(9, activo ? 1 : 0);
+        return ps.executeUpdate();
     }
 
     private static void registrarEmpleado(Connection conexion, Scanner scanner) {
         String id = UtilidadesService.leerTextoObligatorio(scanner, "Código del empleado (ej. EMP006): ");
         String nombre = UtilidadesService.leerTextoObligatorio(scanner, "Nombre: ");
-        String apellido = UtilidadesService.leerTexto(scanner, "Apellido: ");
+        String apellido = UtilidadesService.leerTextoObligatorio(scanner, "Apellido: ");
         String cargo = UtilidadesService.leerTextoObligatorio(scanner, "Cargo: ");
         double sueldo = UtilidadesService.leerDecimalMinimo(scanner, "Sueldo: ", 0);
         String fecha = UtilidadesService.leerTextoObligatorio(scanner, "Fecha de contratación (AAAA-MM-DD): ");
@@ -95,14 +115,10 @@ public class EmpleadosJDBCController {
         boolean activo = UtilidadesService.leerBooleano(scanner, "¿Está activo? (s/n): ");
 
         String sql = "INSERT INTO EMPLEADOS (id_empleado, nombre, apellido, cargo, sueldo, "
-                + "fecha_contratacion, telefono, email, activo) VALUES ("
-                + UtilidadesService.textoSql(id) + ", " + UtilidadesService.textoSql(nombre) + ", "
-                + UtilidadesService.textoSql(apellido) + ", " + UtilidadesService.textoSql(cargo) + ", "
-                + sueldo + ", " + UtilidadesService.textoSql(fecha) + ", " + UtilidadesService.textoSql(telefono) + ", "
-                + UtilidadesService.textoSql(email) + ", " + UtilidadesService.numeroBooleano(activo) + ")";
+                + "fecha_contratacion, telefono, email, activo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-        try (Statement sentencia = conexion.createStatement()) {
-            int filas = sentencia.executeUpdate(sql);
+        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+            int filas = insertarFila(ps, id, nombre, apellido, cargo, sueldo, fecha, telefono, email, activo);
             System.out.println(filas > 0 ? "Empleado registrado correctamente." : "No se registró el empleado.");
         } catch (SQLException e) {
             if (e.getErrorCode() == 1062) {
@@ -130,14 +146,16 @@ public class EmpleadosJDBCController {
 
     private static void buscarEmpleado(Connection conexion, Scanner scanner) throws SQLException {
         String id = UtilidadesService.leerTextoObligatorio(scanner, "Código del empleado: ");
-        String sql = "SELECT * FROM EMPLEADOS WHERE id_empleado = " + UtilidadesService.textoSql(id);
+        String sql = "SELECT * FROM EMPLEADOS WHERE id_empleado = ?";
 
-        try (Statement sentencia = conexion.createStatement();
-             ResultSet resultado = sentencia.executeQuery(sql)) {
-            if (resultado.next()) {
-                mostrarEmpleado(resultado);
-            } else {
-                System.out.println("No se encontró un empleado con ese código.");
+        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+            ps.setString(1, id);
+            try (ResultSet resultado = ps.executeQuery()) {
+                if (resultado.next()) {
+                    mostrarEmpleado(resultado);
+                } else {
+                    System.out.println("No se encontró un empleado con ese código.");
+                }
             }
         }
     }
@@ -145,13 +163,9 @@ public class EmpleadosJDBCController {
     private static void actualizarEmpleado(Connection conexion, Scanner scanner) throws SQLException {
         String id = UtilidadesService.leerTextoObligatorio(scanner, "Código del empleado que deseas actualizar: ");
 
-        try (Statement sentencia = conexion.createStatement();
-             ResultSet resultado = sentencia.executeQuery(
-                     "SELECT id_empleado FROM EMPLEADOS WHERE id_empleado = " + UtilidadesService.textoSql(id))) {
-            if (!resultado.next()) {
-                System.out.println("No se encontró un empleado con ese código.");
-                return;
-            }
+        if (!existeEmpleado(conexion, id)) {
+            System.out.println("No se encontró un empleado con ese código.");
+            return;
         }
 
         String nombre = UtilidadesService.leerTextoObligatorio(scanner, "Nuevo nombre: ");
@@ -162,28 +176,42 @@ public class EmpleadosJDBCController {
         String email = UtilidadesService.leerTextoObligatorio(scanner, "Nuevo email: ");
         boolean activo = UtilidadesService.leerBooleano(scanner, "¿Está activo? (s/n): ");
 
-        String sql = "UPDATE EMPLEADOS SET nombre = " + UtilidadesService.textoSql(nombre)
-                + ", apellido = " + UtilidadesService.textoSql(apellido)
-                + ", cargo = " + UtilidadesService.textoSql(cargo)
-                + ", sueldo = " + sueldo
-                + ", telefono = " + UtilidadesService.textoSql(telefono)
-                + ", email = " + UtilidadesService.textoSql(email)
-                + ", activo = " + UtilidadesService.numeroBooleano(activo)
-                + " WHERE id_empleado = " + UtilidadesService.textoSql(id);
+        String sql = "UPDATE EMPLEADOS SET nombre = ?, apellido = ?, cargo = ?, sueldo = ?, "
+                + "telefono = ?, email = ?, activo = ? WHERE id_empleado = ?";
 
-        try (Statement sentencia = conexion.createStatement()) {
-            int filas = sentencia.executeUpdate(sql);
+        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+            ps.setString(1, nombre);
+            ps.setString(2, apellido);
+            ps.setString(3, cargo);
+            ps.setDouble(4, sueldo);
+            ps.setString(5, telefono);
+            ps.setString(6, email);
+            ps.setInt(7, activo ? 1 : 0);
+            ps.setString(8, id);
+
+            int filas = ps.executeUpdate();
             System.out.println(filas > 0 ? "Empleado actualizado correctamente." : "No se realizó ningún cambio.");
         }
     }
 
     private static void eliminarEmpleado(Connection conexion, Scanner scanner) throws SQLException {
         String id = UtilidadesService.leerTextoObligatorio(scanner, "Código del empleado que deseas eliminar: ");
-        String sql = "DELETE FROM EMPLEADOS WHERE id_empleado = " + UtilidadesService.textoSql(id);
+        String sql = "DELETE FROM EMPLEADOS WHERE id_empleado = ?";
 
-        try (Statement sentencia = conexion.createStatement()) {
-            int filas = sentencia.executeUpdate(sql);
+        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+            ps.setString(1, id);
+            int filas = ps.executeUpdate();
             System.out.println(filas > 0 ? "Empleado eliminado correctamente." : "No se encontró un empleado con ese código.");
+        }
+    }
+
+    private static boolean existeEmpleado(Connection conexion, String id) throws SQLException {
+        String sql = "SELECT 1 FROM EMPLEADOS WHERE id_empleado = ?";
+        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+            ps.setString(1, id);
+            try (ResultSet resultado = ps.executeQuery()) {
+                return resultado.next();
+            }
         }
     }
 
