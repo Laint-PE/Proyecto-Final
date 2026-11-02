@@ -1,34 +1,34 @@
-package controllers;
+package views;
 
-import models.AnimalDAO;
+import controllers.AnimalController;
 import models.AnimalModel;
-import models.PerroModel;
 import models.GatoModel;
+import models.PerroModel;
+import services.ErroresSQL;
 import services.UtilidadesService;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Scanner;
 
-public class AnimalesJDBCController {
+/**
+ * Vista de consola para animales.
+ * Aquí viven Scanner y System.out. Los datos se envían al controlador.
+ */
+public class AnimalView {
 
-    private static final AnimalDAO dao = new AnimalDAO();
+    private final Scanner scanner;
+    private final AnimalController controlador = new AnimalController();
 
-    public static void main(String[] args) {
-        try (Scanner scanner = new Scanner(System.in)) {
-            administrarAnimales(scanner);
-        }
+    public AnimalView(Scanner scanner) {
+        this.scanner = scanner;
     }
 
-    public static void administrarAnimales(Scanner scanner) {
+    public void iniciar() {
         try {
-            dao.crearTabla();
-            dao.insertarEjemplosSiVacia();
-
+            controlador.inicializar();
             System.out.println("Conexión con la base de datos realizada correctamente.");
 
             int opcion;
-
             do {
                 System.out.println("\n===== GESTIONAR ANIMALES =====");
                 System.out.println("1. Registrar animal");
@@ -41,15 +41,14 @@ public class AnimalesJDBCController {
                 opcion = UtilidadesService.leerEntero(scanner, "Elige una opción: ");
 
                 switch (opcion) {
-                    case 1 -> registrarAnimal(scanner);
+                    case 1 -> registrarAnimal();
                     case 2 -> listarAnimales();
-                    case 3 -> buscarAnimal(scanner);
-                    case 4 -> actualizarAnimal(scanner);
-                    case 5 -> eliminarAnimal(scanner);
+                    case 3 -> buscarAnimal();
+                    case 4 -> actualizarAnimal();
+                    case 5 -> eliminarAnimal();
                     case 6 -> System.out.println("Volviendo al menú principal.");
                     default -> System.out.println("Opción inválida. Intenta nuevamente.");
                 }
-
             } while (opcion != 6);
 
         } catch (SQLException e) {
@@ -57,27 +56,30 @@ public class AnimalesJDBCController {
         }
     }
 
-    private static void registrarAnimal(Scanner scanner) {
-        AnimalModel animal = leerDatosAnimal(scanner, null);
-
-        if (animal == null) {
-            return;
-        }
-
+    private void registrarAnimal() {
         try {
-            dao.registrarAnimal(animal);
+            AnimalModel animal = leerDatosAnimal(null);
+
+            if (animal == null) {
+                return;
+            }
+
+            controlador.registrar(animal);
             System.out.println("Animal registrado correctamente.");
 
         } catch (SQLException e) {
-            if (e.getErrorCode() == 1062) {
+            if (e.getErrorCode() == ErroresSQL.DUPLICADO) {
                 System.out.println("Ya existe un animal con ese código.");
             } else {
                 System.out.println("No se pudo registrar el animal: " + e.getMessage());
             }
+        } catch (IllegalArgumentException e) {
+            System.out.println("Datos inválidos: " + e.getMessage());
         }
     }
 
-    private static AnimalModel leerDatosAnimal(Scanner scanner, String codigoExistente) {
+    // Si codigoExistente es null, pide el código (registro); si no, lo reutiliza (actualización).
+    private AnimalModel leerDatosAnimal(String codigoExistente) {
         System.out.println("\nTipo de animal:");
         System.out.println("1. Perro");
         System.out.println("2. Gato");
@@ -89,13 +91,9 @@ public class AnimalesJDBCController {
             return null;
         }
 
-        String codigo;
-
-        if (codigoExistente == null) {
-            codigo = UtilidadesService.leerTextoObligatorio(scanner, "Código: ");
-        } else {
-            codigo = codigoExistente;
-        }
+        String codigo = (codigoExistente == null)
+                ? UtilidadesService.leerTextoObligatorio(scanner, "Código: ")
+                : codigoExistente;
 
         String raza = UtilidadesService.leerTextoObligatorio(scanner, "Raza: ");
         String nombre = UtilidadesService.leerTextoObligatorio(scanner, "Nombre: ");
@@ -108,34 +106,29 @@ public class AnimalesJDBCController {
 
         if (tipoOpcion == 1) {
             boolean bozal = UtilidadesService.leerBooleano(scanner, "¿Requiere bozal en consulta? (s/n): ");
-            String adiestramiento = UtilidadesService.leerTexto(scanner, "Nivel de adiestramiento: ");
+            String adiestramiento = UtilidadesService.leerTextoObligatorio(scanner, "Nivel de adiestramiento: ");
 
-            return new PerroModel(
-                    codigo, raza, nombre, edad, peso, sexo, dueno,
-                    pedigri, pelaje, bozal, adiestramiento
-            );
-
-        } else {
-            boolean transportadora = UtilidadesService.leerBooleano(scanner, "¿Requiere transportadora? (s/n): ");
-            String temperamento = UtilidadesService.leerTexto(scanner, "Temperamento: ");
-
-            return new GatoModel(
-                    codigo, raza, nombre, edad, peso, sexo, dueno,
-                    pedigri, pelaje, transportadora, temperamento
-            );
+            return new PerroModel(codigo, raza, nombre, edad, peso, sexo, dueno,
+                    pedigri, pelaje, bozal, adiestramiento);
         }
+
+        boolean transportadora = UtilidadesService.leerBooleano(scanner, "¿Requiere transportadora? (s/n): ");
+        String temperamento = UtilidadesService.leerTextoObligatorio(scanner, "Temperamento: ");
+
+        return new GatoModel(codigo, raza, nombre, edad, peso, sexo, dueno,
+                pedigri, pelaje, transportadora, temperamento);
     }
 
-    private static void listarAnimales() {
+    private void listarAnimales() {
         try {
-            ArrayList<AnimalModel> animales = dao.listarAnimales();
+            controlador.cargarDesdeBD();
 
-            if (animales.isEmpty()) {
+            if (controlador.getAnimales().isEmpty()) {
                 System.out.println("No hay animales registrados.");
                 return;
             }
 
-            for (AnimalModel animal : animales) {
+            for (AnimalModel animal : controlador.getAnimales()) {
                 mostrarAnimal(animal);
                 System.out.println("----------------------------------------");
             }
@@ -145,11 +138,11 @@ public class AnimalesJDBCController {
         }
     }
 
-    private static void buscarAnimal(Scanner scanner) {
+    private void buscarAnimal() {
         String codigo = UtilidadesService.leerTextoObligatorio(scanner, "Código del animal: ");
 
         try {
-            AnimalModel animal = dao.buscarAnimal(codigo);
+            AnimalModel animal = controlador.buscar(codigo);
 
             if (animal != null) {
                 mostrarAnimal(animal);
@@ -162,47 +155,48 @@ public class AnimalesJDBCController {
         }
     }
 
-    private static void actualizarAnimal(Scanner scanner) {
+    private void actualizarAnimal() {
         String codigo = UtilidadesService.leerTextoObligatorio(
-                scanner, "Código del animal que deseas actualizar: "
-        );
+                scanner, "Código del animal que deseas actualizar: ");
 
         try {
-            if (!dao.existeAnimal(codigo)) {
+            if (!controlador.existe(codigo)) {
                 System.out.println("No se encontró un animal con ese código.");
                 return;
             }
 
-            AnimalModel animal = leerDatosAnimal(scanner, codigo);
+            AnimalModel animal = leerDatosAnimal(codigo);
 
             if (animal == null) {
                 return;
             }
 
-            dao.actualizarAnimal(animal);
-            System.out.println("Animal actualizado correctamente.");
+            if (controlador.actualizar(animal)) {
+                System.out.println("Animal actualizado correctamente.");
+            } else {
+                System.out.println("No se realizó ningún cambio.");
+            }
 
         } catch (SQLException e) {
             System.out.println("No se pudo actualizar el animal: " + e.getMessage());
+        } catch (IllegalArgumentException e) {
+            System.out.println("Datos inválidos: " + e.getMessage());
         }
     }
 
-    private static void eliminarAnimal(Scanner scanner) {
+    private void eliminarAnimal() {
         String codigo = UtilidadesService.leerTextoObligatorio(
-                scanner, "Código del animal que deseas eliminar: "
-        );
+                scanner, "Código del animal que deseas eliminar: ");
 
         try {
-            if (!dao.existeAnimal(codigo)) {
+            if (controlador.eliminar(codigo)) {
+                System.out.println("Animal eliminado correctamente.");
+            } else {
                 System.out.println("No se encontró un animal con ese código.");
-                return;
             }
 
-            dao.eliminarAnimal(codigo);
-            System.out.println("Animal eliminado correctamente.");
-
         } catch (SQLException e) {
-            if (e.getErrorCode() == 1451) {
+            if (e.getErrorCode() == ErroresSQL.LLAVE_FORANEA) {
                 System.out.println("No se puede eliminar: el animal tiene consultas registradas.");
             } else {
                 System.out.println("No se pudo eliminar el animal: " + e.getMessage());
@@ -210,7 +204,7 @@ public class AnimalesJDBCController {
         }
     }
 
-    private static void mostrarAnimal(AnimalModel animal) {
+    private void mostrarAnimal(AnimalModel animal) {
         System.out.println("Código: " + animal.getCodigo());
         System.out.println("Tipo: " + animal.getTipoAnimal());
         System.out.println("Raza: " + animal.getRaza());
@@ -223,14 +217,12 @@ public class AnimalesJDBCController {
         System.out.println("Tipo de pelaje: " + animal.getTipoPelaje());
 
         if (animal instanceof PerroModel perro) {
-            System.out.println("Requiere bozal: " +
-                    (perro.isRequiereBozalEnConsulta() ? "Sí" : "No"));
-            System.out.println("Nivel de adiestramiento: " +
-                    perro.getNivelAdiestramiento());
+            System.out.println("Requiere bozal: " + (perro.isRequiereBozalEnConsulta() ? "Sí" : "No"));
+            System.out.println("Nivel de adiestramiento: " + perro.getNivelAdiestramiento());
 
         } else if (animal instanceof GatoModel gato) {
-            System.out.println("Requiere transportadora: " +
-                    (gato.isRequiereTransportadora() ? "Sí" : "No"));
+            System.out.println("Requiere transportadora: " + (gato.isRequiereTransportadora() ? "Sí" : "No"));
             System.out.println("Temperamento: " + gato.getTemperamento());
-        }}
+        }
+    }
 }
