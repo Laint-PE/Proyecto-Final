@@ -1,31 +1,32 @@
-package controllers;
+package views;
 
-import models.ProductoDAO;
-import models.ProductoModel;
+import controllers.ProductoController;
+import models.CamaModel;
 import models.CroquetasModel;
 import models.PlatoModel;
-import models.CamaModel;
+import models.ProductoModel;
+import services.ErroresSQL;
 import services.UtilidadesService;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Scanner;
 
-public class ProductosJDBCController {
+/**
+ * Vista de consola para productos.
+ * Aquí viven Scanner y System.out. Los datos se envían al controlador.
+ */
+public class ProductoView {
 
-    private static final ProductoDAO dao = new ProductoDAO();
+    private final Scanner scanner;
+    private final ProductoController controlador = new ProductoController();
 
-    public static void main(String[] args) {
-        try (Scanner scanner = new Scanner(System.in)) {
-            administrarProductos(scanner);
-        }
+    public ProductoView(Scanner scanner) {
+        this.scanner = scanner;
     }
 
-    public static void administrarProductos(Scanner scanner) {
+    public void iniciar() {
         try {
-            dao.crearTabla();
-            dao.insertarEjemplosSiVacia();
-
+            controlador.inicializar();
             System.out.println("Conexión con la base de datos realizada correctamente.");
 
             int opcion;
@@ -42,16 +43,15 @@ public class ProductosJDBCController {
                 opcion = UtilidadesService.leerEntero(scanner, "Elige una opción: ");
 
                 switch (opcion) {
-                    case 1 -> registrarProducto(scanner);
+                    case 1 -> registrarProducto();
                     case 2 -> listarProductos();
-                    case 3 -> buscarProducto(scanner);
-                    case 4 -> actualizarProducto(scanner);
-                    case 5 -> eliminarProducto(scanner);
-                    case 6 -> registrarVenta(scanner);
+                    case 3 -> buscarProducto();
+                    case 4 -> actualizarProducto();
+                    case 5 -> eliminarProducto();
+                    case 6 -> registrarVenta();
                     case 7 -> System.out.println("Volviendo al menú principal.");
                     default -> System.out.println("Opción inválida. Intenta nuevamente.");
                 }
-
             } while (opcion != 7);
 
         } catch (SQLException e) {
@@ -59,7 +59,17 @@ public class ProductosJDBCController {
         }
     }
 
-    private static void registrarProducto(Scanner scanner) {
+    // Opción 4 del menú principal: venta directa.
+    public void registrarVentaDesdeMenu() {
+        try {
+            controlador.inicializar();
+            registrarVenta();
+        } catch (SQLException e) {
+            System.out.println("No se pudo registrar la venta: " + e.getMessage());
+        }
+    }
+
+    private void registrarProducto() {
         System.out.println("\nTipo de producto:");
         System.out.println("1. Croquetas");
         System.out.println("2. Plato");
@@ -80,60 +90,52 @@ public class ProductosJDBCController {
         String marca = UtilidadesService.leerTextoObligatorio(scanner, "Marca: ");
         boolean activo = UtilidadesService.leerBooleano(scanner, "¿Está activo? (s/n): ");
 
-        if (tipo != 1 && stock != Math.floor(stock)) {
+        if (tipo != 1 && !controlador.esEntero(stock)) {
             System.out.println("El stock de platos y camas debe ser un número entero.");
             return;
         }
 
-        ProductoModel producto;
-
-        if (tipo == 1) {
-            String sabor = UtilidadesService.leerTextoObligatorio(scanner, "Sabor: ");
-            double peso = UtilidadesService.leerDecimalMinimo(scanner, "Peso del paquete (kg): ", 0.01);
-            String vencimiento = UtilidadesService.leerTextoObligatorio(scanner, "Fecha de vencimiento (AAAA-MM-DD): ");
-            String edad = UtilidadesService.leerTextoObligatorio(scanner, "Edad recomendada: ");
-            String animal = UtilidadesService.leerTextoObligatorio(scanner, "Animal que consume: ");
-
-            producto = new CroquetasModel(
-                    codigo, nombre, precio, stock, descripcion, marca, activo,
-                    sabor, peso, vencimiento, edad, animal
-            );
-
-        } else if (tipo == 2) {
-            String material = UtilidadesService.leerTextoObligatorio(scanner, "Material: ");
-            int capacidad = UtilidadesService.leerEnteroMinimo(scanner, "Capacidad (ml): ", 1);
-            boolean antideslizante = UtilidadesService.leerBooleano(scanner, "¿Es antideslizante? (s/n): ");
-            double extra = UtilidadesService.leerDecimalMinimo(scanner, "Precio extra por material: ", 0);
-            double recargo = UtilidadesService.leerDecimalMinimo(scanner, "Recargo antideslizante: ", 0);
-
-            producto = new PlatoModel(
-                    codigo, nombre, precio, stock, descripcion, marca, activo,
-                    material, capacidad, antideslizante, extra, recargo
-            );
-
-        } else {
-            String tamano = UtilidadesService.leerTextoObligatorio(scanner, "Tamaño: ");
-            String material = UtilidadesService.leerTextoObligatorio(scanner, "Material: ");
-            boolean desmontable = UtilidadesService.leerBooleano(scanner, "¿Es desmontable? (s/n): ");
-            double extra = UtilidadesService.leerDecimalMinimo(scanner, "Precio extra del material: ", 0);
-
-            producto = new CamaModel(
-                    codigo, nombre, precio, stock, descripcion, marca, activo,
-                    tamano, material, desmontable, extra
-            );
-        }
-
         try {
-            boolean registrado = dao.registrarProducto(producto);
+            ProductoModel producto;
 
-            if (registrado) {
+            if (tipo == 1) {
+                String sabor = UtilidadesService.leerTextoObligatorio(scanner, "Sabor: ");
+                double peso = UtilidadesService.leerDecimalMinimo(scanner, "Peso del paquete (kg): ", 0.01);
+                String vencimiento = UtilidadesService.leerTextoObligatorio(scanner, "Fecha de vencimiento (AAAA-MM-DD): ");
+                String edad = UtilidadesService.leerTextoObligatorio(scanner, "Edad recomendada: ");
+                String animal = UtilidadesService.leerTextoObligatorio(scanner, "Animal que consume: ");
+
+                producto = new CroquetasModel(codigo, nombre, precio, stock, descripcion, marca,
+                        activo, sabor, peso, vencimiento, edad, animal);
+
+            } else if (tipo == 2) {
+                String material = UtilidadesService.leerTextoObligatorio(scanner, "Material: ");
+                int capacidad = UtilidadesService.leerEnteroMinimo(scanner, "Capacidad (ml): ", 1);
+                boolean antideslizante = UtilidadesService.leerBooleano(scanner, "¿Es antideslizante? (s/n): ");
+                double extra = UtilidadesService.leerDecimalMinimo(scanner, "Precio extra por material: ", 0);
+                double recargo = UtilidadesService.leerDecimalMinimo(scanner, "Recargo antideslizante: ", 0);
+
+                producto = new PlatoModel(codigo, nombre, precio, stock, descripcion, marca,
+                        activo, material, capacidad, antideslizante, extra, recargo);
+
+            } else {
+                String tamano = UtilidadesService.leerTextoObligatorio(scanner, "Tamaño: ");
+                String material = UtilidadesService.leerTextoObligatorio(scanner, "Material: ");
+                boolean desmontable = UtilidadesService.leerBooleano(scanner, "¿Es desmontable? (s/n): ");
+                double extra = UtilidadesService.leerDecimalMinimo(scanner, "Precio extra del material: ", 0);
+
+                producto = new CamaModel(codigo, nombre, precio, stock, descripcion, marca,
+                        activo, tamano, material, desmontable, extra);
+            }
+
+            if (controlador.registrar(producto)) {
                 System.out.println("Producto registrado correctamente.");
             } else {
                 System.out.println("No se registró el producto.");
             }
 
         } catch (SQLException e) {
-            if (e.getErrorCode() == 1062) {
+            if (e.getErrorCode() == ErroresSQL.DUPLICADO) {
                 System.out.println("Ya existe un producto con ese código.");
             } else {
                 System.out.println("No se pudo registrar: " + e.getMessage());
@@ -143,16 +145,16 @@ public class ProductosJDBCController {
         }
     }
 
-    private static void listarProductos() {
+    private void listarProductos() {
         try {
-            ArrayList<ProductoModel> productos = dao.listarProductos();
+            controlador.cargarDesdeBD();
 
-            if (productos.isEmpty()) {
+            if (controlador.getProductos().isEmpty()) {
                 System.out.println("No hay productos registrados.");
                 return;
             }
 
-            for (ProductoModel producto : productos) {
+            for (ProductoModel producto : controlador.getProductos()) {
                 mostrarProducto(producto);
                 System.out.println("----------------------------------------");
             }
@@ -162,11 +164,11 @@ public class ProductosJDBCController {
         }
     }
 
-    private static void buscarProducto(Scanner scanner) {
+    private void buscarProducto() {
         String codigo = UtilidadesService.leerTextoObligatorio(scanner, "Código del producto: ");
 
         try {
-            ProductoModel producto = dao.buscarProducto(codigo);
+            ProductoModel producto = controlador.buscar(codigo);
 
             if (producto == null) {
                 System.out.println("No se encontró un producto con ese código.");
@@ -179,11 +181,11 @@ public class ProductosJDBCController {
         }
     }
 
-    private static void actualizarProducto(Scanner scanner) {
+    private void actualizarProducto() {
         String codigo = UtilidadesService.leerTextoObligatorio(scanner, "Código del producto que deseas actualizar: ");
 
         try {
-            ProductoModel producto = dao.buscarProducto(codigo);
+            ProductoModel producto = controlador.buscar(codigo);
 
             if (producto == null) {
                 System.out.println("No se encontró un producto con ese código.");
@@ -194,7 +196,7 @@ public class ProductosJDBCController {
             double precio = UtilidadesService.leerDecimalMinimo(scanner, "Nuevo precio: ", 0);
             double stock = UtilidadesService.leerDecimalMinimo(scanner, "Nuevo stock: ", 0);
 
-            if (!(producto instanceof CroquetasModel) && stock != Math.floor(stock)) {
+            if (!controlador.permiteDecimales(producto) && !controlador.esEntero(stock)) {
                 System.out.println("El stock de platos y camas debe ser un número entero.");
                 return;
             }
@@ -203,11 +205,7 @@ public class ProductosJDBCController {
             String marca = UtilidadesService.leerTextoObligatorio(scanner, "Nueva marca: ");
             boolean activo = UtilidadesService.leerBooleano(scanner, "¿Está activo? (s/n): ");
 
-            boolean actualizado = dao.actualizarProducto(
-                    codigo, nombre, precio, stock, descripcion, marca, activo
-            );
-
-            if (actualizado) {
+            if (controlador.actualizar(codigo, nombre, precio, stock, descripcion, marca, activo)) {
                 System.out.println("Producto actualizado correctamente.");
                 System.out.println("Los datos específicos del tipo se mantienen.");
             } else {
@@ -219,13 +217,11 @@ public class ProductosJDBCController {
         }
     }
 
-    private static void eliminarProducto(Scanner scanner) {
+    private void eliminarProducto() {
         String codigo = UtilidadesService.leerTextoObligatorio(scanner, "Código del producto que deseas eliminar: ");
 
         try {
-            boolean eliminado = dao.eliminarProducto(codigo);
-
-            if (eliminado) {
+            if (controlador.eliminar(codigo)) {
                 System.out.println("Producto eliminado correctamente.");
             } else {
                 System.out.println("No se encontró un producto con ese código.");
@@ -236,30 +232,18 @@ public class ProductosJDBCController {
         }
     }
 
-    private static void registrarVenta(Scanner scanner) {
+    private void registrarVenta() {
         String codigo = UtilidadesService.leerTextoObligatorio(scanner, "Código del producto: ");
         double cantidad = UtilidadesService.leerDecimalMinimo(scanner, "Cantidad a vender (unidades o kg): ", 0.01);
 
         try {
-            System.out.println(dao.registrarVenta(codigo, cantidad));
-
+            System.out.println(controlador.registrarVenta(codigo, cantidad));
         } catch (SQLException e) {
             System.out.println("No se pudo registrar la venta: " + e.getMessage());
         }
     }
 
-    public static void registrarVentaDesdeMenu(Scanner scanner) {
-        try {
-            dao.crearTabla();
-            dao.insertarEjemplosSiVacia();
-            registrarVenta(scanner);
-
-        } catch (SQLException e) {
-            System.out.println("No se pudo registrar la venta: " + e.getMessage());
-        }
-    }
-
-    private static void mostrarProducto(ProductoModel producto) {
+    private void mostrarProducto(ProductoModel producto) {
         System.out.println("Código: " + producto.getCodigo());
 
         if (producto instanceof CroquetasModel) {

@@ -3,13 +3,13 @@ package views;
 import controllers.AnimalesJDBCController;
 import controllers.EmpleadosJDBCController;
 import controllers.MenuConsultasController;
-import controllers.ProductosJDBCController;
 
 import java.util.Scanner;
 
 public class MainView {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
+        ProductoView productoView = new ProductoView(scanner);
         int opcion = 0;
 
         while (opcion != 6) {
@@ -34,13 +34,13 @@ public class MainView {
                     AnimalesJDBCController.administrarAnimales(scanner);
                     break;
                 case 2:
-                    ProductosJDBCController.administrarProductos(scanner);
+                    productoView.iniciar();
                     break;
                 case 3:
                     EmpleadosJDBCController.administrarEmpleados(scanner);
                     break;
                 case 4:
-                    ProductosJDBCController.registrarVentaDesdeMenu(scanner);
+                    productoView.registrarVentaDesdeMenu();
                     break;
                 case 5:
                     new MenuConsultasController().iniciar(scanner);
