@@ -1,6 +1,5 @@
 package views;
 
-import controllers.EmpleadosJDBCController;
 import controllers.MenuConsultasController;
 
 import java.util.Scanner;
@@ -10,6 +9,7 @@ public class MainView {
         Scanner scanner = new Scanner(System.in);
         AnimalView animalView = new AnimalView(scanner);
         ProductoView productoView = new ProductoView(scanner);
+        EmpleadoView empleadoView = new EmpleadoView(scanner);
         int opcion = 0;
 
         while (opcion != 6) {
@@ -37,7 +37,7 @@ public class MainView {
                     productoView.iniciar();
                     break;
                 case 3:
-                    EmpleadosJDBCController.administrarEmpleados(scanner);
+                    empleadoView.iniciar();
                     break;
                 case 4:
                     productoView.registrarVentaDesdeMenu();

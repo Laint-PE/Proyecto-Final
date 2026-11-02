@@ -1,6 +1,7 @@
 package models;
 
 import services.ConexionBDService;
+import services.UtilidadesService;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -9,20 +10,32 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 
+/**
+ * DAO de empleados. La tabla EMPLEADOS guarda a Veterinarios y Recepcionistas
+ * en una sola tabla; la columna "tipo" decide qué modelo se construye.
+ * Las columnas especialidad / disponible / turno son NULL cuando no aplican.
+ * El sueldo NO se guarda: lo calcula cada modelo con calcularSueldo().
+ */
 public class EmpleadoDAO {
+
+    public static final String TIPO_VETERINARIO = "Veterinario";
+    public static final String TIPO_RECEPCIONISTA = "Recepcionista";
+
+    private static final String SQL_INSERT = "INSERT INTO EMPLEADOS (id_empleado, tipo, nombre, dni, "
+            + "telefono, tiempo_completo, especialidad, disponible, turno) "
+            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     public void crearTabla() throws SQLException {
         String sql = "CREATE TABLE IF NOT EXISTS EMPLEADOS ("
                 + "id_empleado VARCHAR(50) PRIMARY KEY, "
+                + "tipo VARCHAR(20) NOT NULL, "
                 + "nombre VARCHAR(100) NOT NULL, "
-                + "apellido VARCHAR(100) NOT NULL, "
-                + "cargo VARCHAR(100) NOT NULL, "
-                + "sueldo DOUBLE NOT NULL, "
-                + "fecha_contratacion VARCHAR(20), "
-                + "telefono VARCHAR(20), "
-                + "email VARCHAR(100), "
-                + "activo TINYINT NOT NULL, "
-                + "disponible TINYINT NOT NULL DEFAULT 1"
+                + "dni VARCHAR(20) NOT NULL UNIQUE, "
+                + "telefono VARCHAR(20) NOT NULL, "
+                + "tiempo_completo TINYINT NOT NULL, "
+                + "especialidad VARCHAR(100) NULL, "
+                + "disponible TINYINT NULL, "
+                + "turno VARCHAR(50) NULL"
                 + ")";
 
         try (Connection conexion = ConexionBDService.conectar();
@@ -32,93 +45,71 @@ public class EmpleadoDAO {
     }
 
     public void insertarEjemplosSiVacia() throws SQLException {
-        int cantidad = 0;
+        String sql = "SELECT COUNT(*) FROM EMPLEADOS";
 
         try (Connection conexion = ConexionBDService.conectar();
-             Statement sentencia = conexion.createStatement();
-             ResultSet resultado = sentencia.executeQuery("SELECT COUNT(*) FROM EMPLEADOS")) {
+             PreparedStatement ps = conexion.prepareStatement(sql);
+             ResultSet resultado = ps.executeQuery()) {
 
-            if (resultado.next()) {
-                cantidad = resultado.getInt(1);
+            if (resultado.next() && resultado.getInt(1) > 0) {
+                return;
             }
         }
 
-        if (cantidad > 0) {
-            return;
-        }
+        registrarEmpleado(new VeterinarioModel(
+                "EMP001", "Carlos Gómez", "40123456", "987654321",
+                true, "Medicina general", true));
 
-        String sql = "INSERT INTO EMPLEADOS (id_empleado, nombre, apellido, cargo, sueldo, "
-                + "fecha_contratacion, telefono, email, activo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        registrarEmpleado(new RecepcionistaModel(
+                "EMP002", "Ana Torres", "40234567", "912345678",
+                true, "Mañana"));
 
-        try (Connection conexion = ConexionBDService.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql)) {
+        registrarEmpleado(new VeterinarioModel(
+                "EMP003", "Luis Pérez", "40345678", "998877665",
+                false, "Cirugía", true));
 
-            insertarFila(ps, "EMP001", "Carlos", "Gómez", "Veterinario",
-                    2500, "2023-01-15", "987654321", "carlos.gomez@veterinaria.pe", true);
-
-            insertarFila(ps, "EMP002", "Ana", "Torres", "Recepcionista",
-                    1500, "2023-05-10", "912345678", "ana.torres@veterinaria.pe", true);
-
-            insertarFila(ps, "EMP003", "Luis", "Pérez", "Asistente",
-                    1200, "2024-02-01", "998877665", "luis.perez@veterinaria.pe", true);
-
-            insertarFila(ps, "EMP004", "María", "Rojas", "Administradora",
-                    2800, "2022-11-01", "976543210", "maria.rojas@veterinaria.pe", true);
-
-            insertarFila(ps, "EMP005", "Jorge", "Silva", "Peluquero Canino",
-                    1600, "2023-08-20", "954321098", "jorge.silva@veterinaria.pe", true);
-        }
+        registrarEmpleado(new RecepcionistaModel(
+                "EMP004", "María Rojas", "40456789", "976543210",
+                false, "Tarde"));
     }
 
-    private void insertarFila(PreparedStatement ps, String id, String nombre,
-                              String apellido, String cargo, double sueldo,
-                              String fecha, String telefono, String email,
-                              boolean activo) throws SQLException {
-
-        ps.setString(1, id);
-        ps.setString(2, nombre);
-        ps.setString(3, apellido);
-        ps.setString(4, cargo);
-        ps.setDouble(5, sueldo);
-        ps.setString(6, fecha);
-        ps.setString(7, telefono);
-        ps.setString(8, email);
-        ps.setInt(9, activo ? 1 : 0);
-        ps.executeUpdate();
-    }
-
-    public boolean registrarEmpleado(String id, String nombre, String apellido,
-                                     String cargo, double sueldo, String fecha,
-                                     String telefono, String email, boolean activo)
-            throws SQLException {
-
-        String sql = "INSERT INTO EMPLEADOS (id_empleado, nombre, apellido, cargo, sueldo, "
-                + "fecha_contratacion, telefono, email, activo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
+    public boolean registrarEmpleado(EmpleadoModel empleado) throws SQLException {
         try (Connection conexion = ConexionBDService.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql)) {
+             PreparedStatement ps = conexion.prepareStatement(SQL_INSERT)) {
 
-            ps.setString(1, id);
-            ps.setString(2, nombre);
-            ps.setString(3, apellido);
-            ps.setString(4, cargo);
-            ps.setDouble(5, sueldo);
-            ps.setString(6, fecha);
-            ps.setString(7, telefono);
-            ps.setString(8, email);
-            ps.setInt(9, activo ? 1 : 0);
+            ps.setString(1, empleado.getCodigo());
+            ps.setString(3, empleado.getNombre());
+            ps.setString(4, empleado.getDni());
+            ps.setString(5, empleado.getTelefono());
+            ps.setInt(6, empleado.isTiempoCompleto() ? 1 : 0);
+
+            if (empleado instanceof VeterinarioModel vet) {
+                ps.setString(2, TIPO_VETERINARIO);
+                ps.setString(7, vet.getEspecialidad());
+                ps.setInt(8, vet.isDisponible() ? 1 : 0);
+                UtilidadesService.setStringONull(ps, 9, null);
+
+            } else if (empleado instanceof RecepcionistaModel rec) {
+                ps.setString(2, TIPO_RECEPCIONISTA);
+                UtilidadesService.setStringONull(ps, 7, null);
+                UtilidadesService.setBooleanONull(ps, 8, null);
+                ps.setString(9, rec.getTurno());
+
+            } else {
+                throw new SQLException("Tipo de empleado no soportado.");
+            }
 
             return ps.executeUpdate() > 0;
         }
     }
 
-    public ArrayList<String[]> listarEmpleados() throws SQLException {
-        ArrayList<String[]> empleados = new ArrayList<>();
+    public ArrayList<EmpleadoModel> listarEmpleados() throws SQLException {
+        ArrayList<EmpleadoModel> empleados = new ArrayList<>();
         String sql = "SELECT * FROM EMPLEADOS ORDER BY id_empleado";
 
         try (Connection conexion = ConexionBDService.conectar();
-             Statement sentencia = conexion.createStatement();
-             ResultSet resultado = sentencia.executeQuery(sql)) {
+             PreparedStatement ps = conexion.prepareStatement(sql);
+             ResultSet resultado = ps.executeQuery()) {
 
             while (resultado.next()) {
                 empleados.add(convertirEmpleado(resultado));
@@ -128,13 +119,13 @@ public class EmpleadoDAO {
         return empleados;
     }
 
-    public String[] buscarEmpleado(String id) throws SQLException {
+    public EmpleadoModel buscarEmpleado(String codigo) throws SQLException {
         String sql = "SELECT * FROM EMPLEADOS WHERE id_empleado = ?";
 
         try (Connection conexion = ConexionBDService.conectar();
              PreparedStatement ps = conexion.prepareStatement(sql)) {
 
-            ps.setString(1, id);
+            ps.setString(1, codigo);
 
             try (ResultSet resultado = ps.executeQuery()) {
                 if (resultado.next()) {
@@ -146,47 +137,13 @@ public class EmpleadoDAO {
         return null;
     }
 
-    public boolean actualizarEmpleado(String id, String nombre, String apellido,
-                                      String cargo, double sueldo, String telefono,
-                                      String email, boolean activo) throws SQLException {
-
-        String sql = "UPDATE EMPLEADOS SET nombre = ?, apellido = ?, cargo = ?, "
-                + "sueldo = ?, telefono = ?, email = ?, activo = ? WHERE id_empleado = ?";
-
-        try (Connection conexion = ConexionBDService.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql)) {
-
-            ps.setString(1, nombre);
-            ps.setString(2, apellido);
-            ps.setString(3, cargo);
-            ps.setDouble(4, sueldo);
-            ps.setString(5, telefono);
-            ps.setString(6, email);
-            ps.setInt(7, activo ? 1 : 0);
-            ps.setString(8, id);
-
-            return ps.executeUpdate() > 0;
-        }
-    }
-
-    public boolean eliminarEmpleado(String id) throws SQLException {
-        String sql = "DELETE FROM EMPLEADOS WHERE id_empleado = ?";
-
-        try (Connection conexion = ConexionBDService.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql)) {
-
-            ps.setString(1, id);
-            return ps.executeUpdate() > 0;
-        }
-    }
-
-    public boolean existeEmpleado(String id) throws SQLException {
+    public boolean existeEmpleado(String codigo) throws SQLException {
         String sql = "SELECT 1 FROM EMPLEADOS WHERE id_empleado = ?";
 
         try (Connection conexion = ConexionBDService.conectar();
              PreparedStatement ps = conexion.prepareStatement(sql)) {
 
-            ps.setString(1, id);
+            ps.setString(1, codigo);
 
             try (ResultSet resultado = ps.executeQuery()) {
                 return resultado.next();
@@ -194,40 +151,67 @@ public class EmpleadoDAO {
         }
     }
 
-    public void asegurarColumnaDisponible() throws SQLException {
-        boolean existe = false;
+    // No cambia el tipo ni "disponible": esa columna la controlan las consultas.
+    public boolean actualizarEmpleado(EmpleadoModel empleado) throws SQLException {
+        String sql = "UPDATE EMPLEADOS SET nombre = ?, dni = ?, telefono = ?, "
+                + "tiempo_completo = ?, especialidad = ?, turno = ? WHERE id_empleado = ?";
 
         try (Connection conexion = ConexionBDService.conectar();
-             Statement sentencia = conexion.createStatement();
-             ResultSet resultado = sentencia.executeQuery(
-                     "SHOW COLUMNS FROM EMPLEADOS LIKE 'disponible'")) {
+             PreparedStatement ps = conexion.prepareStatement(sql)) {
 
-            existe = resultado.next();
-        }
+            ps.setString(1, empleado.getNombre());
+            ps.setString(2, empleado.getDni());
+            ps.setString(3, empleado.getTelefono());
+            ps.setInt(4, empleado.isTiempoCompleto() ? 1 : 0);
 
-        if (!existe) {
-            try (Connection conexion = ConexionBDService.conectar();
-                 Statement sentencia = conexion.createStatement()) {
+            if (empleado instanceof VeterinarioModel vet) {
+                ps.setString(5, vet.getEspecialidad());
+                UtilidadesService.setStringONull(ps, 6, null);
 
-                sentencia.executeUpdate(
-                        "ALTER TABLE EMPLEADOS ADD COLUMN disponible TINYINT NOT NULL DEFAULT 1"
-                );
+            } else if (empleado instanceof RecepcionistaModel rec) {
+                UtilidadesService.setStringONull(ps, 5, null);
+                ps.setString(6, rec.getTurno());
+
+            } else {
+                throw new SQLException("Tipo de empleado no soportado.");
             }
+
+            ps.setString(7, empleado.getCodigo());
+
+            return ps.executeUpdate() > 0;
         }
     }
 
-    private String[] convertirEmpleado(ResultSet resultado) throws SQLException {
-        return new String[]{
-                resultado.getString("id_empleado"),
-                resultado.getString("nombre"),
-                resultado.getString("apellido"),
-                resultado.getString("cargo"),
-                String.valueOf(resultado.getDouble("sueldo")),
-                resultado.getString("fecha_contratacion"),
-                resultado.getString("telefono"),
-                resultado.getString("email"),
-                resultado.getInt("activo") == 1 ? "Sí" : "No",
-                resultado.getInt("disponible") == 1 ? "Sí" : "No"
-        };
+    public boolean eliminarEmpleado(String codigo) throws SQLException {
+        String sql = "DELETE FROM EMPLEADOS WHERE id_empleado = ?";
+
+        try (Connection conexion = ConexionBDService.conectar();
+             PreparedStatement ps = conexion.prepareStatement(sql)) {
+
+            ps.setString(1, codigo);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    private EmpleadoModel convertirEmpleado(ResultSet resultado) throws SQLException {
+        String tipo = resultado.getString("tipo");
+        String codigo = resultado.getString("id_empleado");
+        String nombre = resultado.getString("nombre");
+        String dni = resultado.getString("dni");
+        String telefono = resultado.getString("telefono");
+        boolean tiempoCompleto = resultado.getInt("tiempo_completo") == 1;
+
+        if (TIPO_VETERINARIO.equals(tipo)) {
+            return new VeterinarioModel(
+                    codigo, nombre, dni, telefono, tiempoCompleto,
+                    resultado.getString("especialidad"),
+                    resultado.getInt("disponible") == 1
+            );
+        }
+
+        return new RecepcionistaModel(
+                codigo, nombre, dni, telefono, tiempoCompleto,
+                resultado.getString("turno")
+        );
     }
 }
