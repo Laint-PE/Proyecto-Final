@@ -57,7 +57,8 @@ CREATE TABLE IF NOT EXISTS EMPLEADOS (
     fecha_contratacion VARCHAR(20),
     telefono VARCHAR(20),
     email VARCHAR(100),
-    activo TINYINT NOT NULL
+    activo TINYINT NOT NULL,
+    disponible TINYINT NOT NULL DEFAULT 1
 );
 
 INSERT IGNORE INTO EMPLEADOS
@@ -101,3 +102,19 @@ INSERT IGNORE INTO ANIMALES
 (codigo, tipo_animal, raza, nombre, edad, peso, sexo, nombre_dueno, pedigri, tipo_pelaje, requiere_bozal, nivel_adiestramiento)
 VALUES
 ('ANM003', 'Perro', 'Mestizo', 'Max', 5, 18.0, 'Macho', 'Jorge Silva', 0, 'Medio', 1, 'Básico');
+
+-- Va al final porque sus claves foráneas dependen de ANIMALES y EMPLEADOS.
+CREATE TABLE IF NOT EXISTS CONSULTAS (
+    codigo VARCHAR(50) PRIMARY KEY,
+    fecha DATE NOT NULL,
+    motivo VARCHAR(255) NOT NULL,
+    id_animal VARCHAR(50) NOT NULL,
+    id_veterinario VARCHAR(50) NOT NULL,
+    id_recepcionista VARCHAR(50) NOT NULL,
+    CONSTRAINT fk_consulta_animal
+        FOREIGN KEY (id_animal) REFERENCES ANIMALES(codigo),
+    CONSTRAINT fk_consulta_veterinario
+        FOREIGN KEY (id_veterinario) REFERENCES EMPLEADOS(id_empleado),
+    CONSTRAINT fk_consulta_recepcionista
+        FOREIGN KEY (id_recepcionista) REFERENCES EMPLEADOS(id_empleado)
+);

@@ -58,7 +58,8 @@ public class AnimalesJDBCController {
         }
     }
 
-    private static void crearTabla(Connection conexion) throws SQLException {
+    // Sentencias fijas, sin datos del usuario: Statement es suficiente.
+    static void crearTabla(Connection conexion) throws SQLException {
         String sql = "CREATE TABLE IF NOT EXISTS ANIMALES ("
                 + "codigo VARCHAR(50) PRIMARY KEY, "
                 + "tipo_animal VARCHAR(20) NOT NULL, "
@@ -81,7 +82,7 @@ public class AnimalesJDBCController {
         }
     }
 
-    private static void insertarEjemplosSiVacia(Connection conexion) throws SQLException {
+    static void insertarEjemplosSiVacia(Connection conexion) throws SQLException {
         int cantidad = 0;
         try (Statement sentencia = conexion.createStatement();
              ResultSet resultado = sentencia.executeQuery("SELECT COUNT(*) FROM ANIMALES")) {
@@ -94,6 +95,7 @@ public class AnimalesJDBCController {
             return;
         }
 
+        // Un solo PreparedStatement reutilizado para los tres ejemplos.
         try (PreparedStatement ps = conexion.prepareStatement(SQL_INSERT)) {
             insertarAnimal(ps, perroEjemplo("ANM001", "Labrador", "Simba", 3, 25.5, "Macho", "Carlos Díaz", true, "Corto", false, "Intermedio"));
             insertarAnimal(ps, gatoEjemplo("ANM002", "Persa", "Luna", 2, 4.2, "Hembra", "Ana Torres", false, "Largo", true, "Tranquilo"));
@@ -140,12 +142,14 @@ public class AnimalesJDBCController {
         return d;
     }
 
+    // Asigna el parámetro 1 (código) y luego los 13 restantes en el mismo orden que SQL_INSERT.
     private static int insertarAnimal(PreparedStatement ps, DatosAnimal d) throws SQLException {
         ps.setString(1, d.codigo);
         asignarCampos(ps, d, 2);
         return ps.executeUpdate();
     }
 
+    // Asigna los 13 campos que comparten INSERT y UPDATE, empezando en la posición indicada.
     private static void asignarCampos(PreparedStatement ps, DatosAnimal d, int inicio) throws SQLException {
         int i = inicio;
         ps.setString(i++, d.tipo);
@@ -211,6 +215,7 @@ public class AnimalesJDBCController {
         datos.pedigri = UtilidadesService.leerBooleano(scanner, "¿Tiene pedigrí? (s/n): ");
         datos.tipoPelaje = UtilidadesService.leerTextoObligatorio(scanner, "Tipo de pelaje: ");
 
+        // Los campos que no aplican al tipo quedan en null y se guardan como NULL.
         if (tipoOpcion == 1) {
             datos.requiereBozal = UtilidadesService.leerBooleano(scanner, "¿Requiere bozal en consulta? (s/n): ");
             datos.nivelAdiestramiento = UtilidadesService.leerTexto(scanner, "Nivel de adiestramiento: ");
@@ -281,6 +286,12 @@ public class AnimalesJDBCController {
             ps.setString(1, codigo);
             int filas = ps.executeUpdate();
             System.out.println(filas > 0 ? "Animal eliminado correctamente." : "No se encontró un animal con ese código.");
+        } catch (SQLException e) {
+            if (e.getErrorCode() == 1451) {
+                System.out.println("No se puede eliminar: el animal tiene consultas registradas.");
+            } else {
+                throw e;
+            }
         }
     }
 

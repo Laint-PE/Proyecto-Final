@@ -45,7 +45,7 @@ public class EmpleadosJDBCController {
     }
 
     // CREATE TABLE no recibe datos del usuario, así que Statement sigue siendo válido aquí.
-    private static void crearTabla(Connection conexion) throws SQLException {
+    static void crearTabla(Connection conexion) throws SQLException {
         String sql = "CREATE TABLE IF NOT EXISTS EMPLEADOS ("
                 + "id_empleado VARCHAR(50) PRIMARY KEY, "
                 + "nombre VARCHAR(100) NOT NULL, "
@@ -55,14 +55,15 @@ public class EmpleadosJDBCController {
                 + "fecha_contratacion VARCHAR(20), "
                 + "telefono VARCHAR(20), "
                 + "email VARCHAR(100), "
-                + "activo TINYINT NOT NULL"
+                + "activo TINYINT NOT NULL, "
+                + "disponible TINYINT NOT NULL DEFAULT 1"
                 + ")";
         try (Statement sentencia = conexion.createStatement()) {
             sentencia.executeUpdate(sql);
         }
     }
 
-    private static void insertarEjemplosSiVacia(Connection conexion) throws SQLException {
+    static void insertarEjemplosSiVacia(Connection conexion) throws SQLException {
         int cantidad = 0;
         try (Statement sentencia = conexion.createStatement();
              ResultSet resultado = sentencia.executeQuery("SELECT COUNT(*) FROM EMPLEADOS")) {
@@ -206,6 +207,12 @@ public class EmpleadosJDBCController {
             ps.setString(1, id);
             int filas = ps.executeUpdate();
             System.out.println(filas > 0 ? "Empleado eliminado correctamente." : "No se encontró un empleado con ese código.");
+        } catch (SQLException e) {
+            if (e.getErrorCode() == 1451) {
+                System.out.println("No se puede eliminar: el empleado tiene consultas registradas.");
+            } else {
+                throw e;
+            }
         }
     }
 
