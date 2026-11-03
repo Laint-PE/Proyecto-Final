@@ -11,18 +11,25 @@ import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.ArrayList;
 
+/**
+ * DAO de consultas. Guarda solo los códigos (claves foráneas) y reconstruye
+ * el ConsultaModel completo usando AnimalDAO y EmpleadoDAO.
+ */
 public class ConsultaDAO {
 
-    public void prepararTablas() throws SQLException {
-        AnimalDAO animalDAO = new AnimalDAO();
-        EmpleadoDAO empleadoDAO = new EmpleadoDAO();
+    private static final String SQL_SELECT = "SELECT codigo, fecha, motivo, id_animal, "
+            + "id_veterinario, id_recepcionista FROM CONSULTAS";
 
+    private final AnimalDAO animalDAO = new AnimalDAO();
+    private final EmpleadoDAO empleadoDAO = new EmpleadoDAO();
+
+    // Las tablas ANIMALES y EMPLEADOS deben existir antes por las claves foráneas.
+    public void prepararTablas() throws SQLException {
         animalDAO.crearTabla();
         animalDAO.insertarEjemplosSiVacia();
 
         empleadoDAO.crearTabla();
         empleadoDAO.insertarEjemplosSiVacia();
-        empleadoDAO.asegurarColumnaDisponible();
 
         crearTabla();
     }
@@ -60,144 +67,32 @@ public class ConsultaDAO {
         }
     }
 
-    public boolean existeAnimal(String codigo) throws SQLException {
-        String sql = "SELECT 1 FROM ANIMALES WHERE codigo = ?";
-
-        try (Connection conexion = ConexionBDService.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql)) {
-
-            ps.setString(1, codigo);
-
-            try (ResultSet resultado = ps.executeQuery()) {
-                return resultado.next();
-            }
-        }
-    }
-
-    public boolean veterinarioDisponible(String codigo) throws SQLException {
-        String sql = "SELECT 1 FROM EMPLEADOS WHERE id_empleado = ? "
-                + "AND cargo = 'Veterinario' AND activo = 1 AND disponible = 1";
-
-        try (Connection conexion = ConexionBDService.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql)) {
-
-            ps.setString(1, codigo);
-
-            try (ResultSet resultado = ps.executeQuery()) {
-                return resultado.next();
-            }
-        }
-    }
-
-    public boolean recepcionistaActivo(String codigo) throws SQLException {
-        String sql = "SELECT 1 FROM EMPLEADOS WHERE id_empleado = ? "
-                + "AND cargo = 'Recepcionista' AND activo = 1";
-
-        try (Connection conexion = ConexionBDService.conectar();
-             PreparedStatement ps = conexion.prepareStatement(sql)) {
-
-            ps.setString(1, codigo);
-
-            try (ResultSet resultado = ps.executeQuery()) {
-                return resultado.next();
-            }
-        }
-    }
-
-    public ArrayList<String[]> listarAnimales() throws SQLException {
-        ArrayList<String[]> animales = new ArrayList<>();
-        String sql = "SELECT codigo, nombre, tipo_animal FROM ANIMALES ORDER BY codigo";
-
-        try (Connection conexion = ConexionBDService.conectar();
-             Statement sentencia = conexion.createStatement();
-             ResultSet resultado = sentencia.executeQuery(sql)) {
-
-            while (resultado.next()) {
-                animales.add(new String[]{
-                        resultado.getString("codigo"),
-                        resultado.getString("nombre"),
-                        resultado.getString("tipo_animal")
-                });
-            }
-        }
-
-        return animales;
-    }
-
-    public ArrayList<String[]> listarVeterinariosDisponibles() throws SQLException {
-        ArrayList<String[]> empleados = new ArrayList<>();
-
-        String sql = "SELECT id_empleado, nombre, apellido FROM EMPLEADOS "
-                + "WHERE cargo = 'Veterinario' AND activo = 1 AND disponible = 1 "
-                + "ORDER BY id_empleado";
-
-        try (Connection conexion = ConexionBDService.conectar();
-             Statement sentencia = conexion.createStatement();
-             ResultSet resultado = sentencia.executeQuery(sql)) {
-
-            while (resultado.next()) {
-                empleados.add(new String[]{
-                        resultado.getString("id_empleado"),
-                        resultado.getString("nombre"),
-                        resultado.getString("apellido")
-                });
-            }
-        }
-
-        return empleados;
-    }
-
-    public ArrayList<String[]> listarRecepcionistas() throws SQLException {
-        ArrayList<String[]> empleados = new ArrayList<>();
-
-        String sql = "SELECT id_empleado, nombre, apellido FROM EMPLEADOS "
-                + "WHERE cargo = 'Recepcionista' AND activo = 1 ORDER BY id_empleado";
-
-        try (Connection conexion = ConexionBDService.conectar();
-             Statement sentencia = conexion.createStatement();
-             ResultSet resultado = sentencia.executeQuery(sql)) {
-
-            while (resultado.next()) {
-                empleados.add(new String[]{
-                        resultado.getString("id_empleado"),
-                        resultado.getString("nombre"),
-                        resultado.getString("apellido")
-                });
-            }
-        }
-
-        return empleados;
-    }
-
-    public boolean registrarConsulta(String codigo, LocalDate fecha, String motivo,
-                                     String codigoAnimal, String codigoVet,
-                                     String codigoRec) throws SQLException {
-
+    // Inserta la consulta y marca al veterinario como ocupado en una sola transacción.
+    public boolean registrarConsulta(ConsultaModel consulta) throws SQLException {
         String sqlInsert = "INSERT INTO CONSULTAS (codigo, fecha, motivo, id_animal, "
                 + "id_veterinario, id_recepcionista) VALUES (?, ?, ?, ?, ?, ?)";
 
         String sqlOcupar = "UPDATE EMPLEADOS SET disponible = 0 "
-                + "WHERE id_empleado = ? AND cargo = 'Veterinario' "
-                + "AND activo = 1 AND disponible = 1";
+                + "WHERE id_empleado = ? AND tipo = 'Veterinario' AND disponible = 1";
 
         try (Connection conexion = ConexionBDService.conectar()) {
             conexion.setAutoCommit(false);
 
             try {
                 try (PreparedStatement ps = conexion.prepareStatement(sqlInsert)) {
-                    ps.setString(1, codigo);
-                    ps.setDate(2, Date.valueOf(fecha));
-                    ps.setString(3, motivo);
-                    ps.setString(4, codigoAnimal);
-                    ps.setString(5, codigoVet);
-                    ps.setString(6, codigoRec);
+                    ps.setString(1, consulta.getCodigo());
+                    ps.setDate(2, Date.valueOf(LocalDate.parse(consulta.getFecha())));
+                    ps.setString(3, consulta.getMotivo());
+                    ps.setString(4, consulta.getAnimal().getCodigo());
+                    ps.setString(5, consulta.getVeterinario().getCodigo());
+                    ps.setString(6, consulta.getRecepcionista().getCodigo());
                     ps.executeUpdate();
                 }
 
                 int filas;
 
                 try (PreparedStatement ps = conexion.prepareStatement(sqlOcupar)) {
-                    ps.setString(1, codigoVet);
+                    ps.setString(1, consulta.getVeterinario().getCodigo());
                     filas = ps.executeUpdate();
                 }
 
@@ -218,39 +113,29 @@ public class ConsultaDAO {
         }
     }
 
-    public ArrayList<String[]> listarConsultas() throws SQLException {
-        ArrayList<String[]> consultas = new ArrayList<>();
-
-        String sql = "SELECT c.codigo, c.fecha, c.motivo, a.nombre AS animal, "
-                + "a.tipo_animal, CONCAT(v.nombre, ' ', v.apellido) AS veterinario, "
-                + "CONCAT(r.nombre, ' ', r.apellido) AS recepcionista "
-                + "FROM CONSULTAS c "
-                + "JOIN ANIMALES a ON c.id_animal = a.codigo "
-                + "JOIN EMPLEADOS v ON c.id_veterinario = v.id_empleado "
-                + "JOIN EMPLEADOS r ON c.id_recepcionista = r.id_empleado "
-                + "ORDER BY c.codigo";
+    public ArrayList<ConsultaModel> listarConsultas() throws SQLException {
+        ArrayList<String[]> filas;
+        String sql = SQL_SELECT + " ORDER BY codigo";
 
         try (Connection conexion = ConexionBDService.conectar();
-             Statement sentencia = conexion.createStatement();
-             ResultSet resultado = sentencia.executeQuery(sql)) {
+             PreparedStatement ps = conexion.prepareStatement(sql);
+             ResultSet resultado = ps.executeQuery()) {
 
-            while (resultado.next()) {
-                consultas.add(convertirConsulta(resultado));
-            }
+            filas = leerFilas(resultado);
+        }
+
+        ArrayList<ConsultaModel> consultas = new ArrayList<>();
+
+        for (String[] fila : filas) {
+            consultas.add(construirConsulta(fila));
         }
 
         return consultas;
     }
 
-    public String[] buscarConsulta(String codigo) throws SQLException {
-        String sql = "SELECT c.codigo, c.fecha, c.motivo, a.nombre AS animal, "
-                + "a.tipo_animal, CONCAT(v.nombre, ' ', v.apellido) AS veterinario, "
-                + "CONCAT(r.nombre, ' ', r.apellido) AS recepcionista "
-                + "FROM CONSULTAS c "
-                + "JOIN ANIMALES a ON c.id_animal = a.codigo "
-                + "JOIN EMPLEADOS v ON c.id_veterinario = v.id_empleado "
-                + "JOIN EMPLEADOS r ON c.id_recepcionista = r.id_empleado "
-                + "WHERE c.codigo = ?";
+    public ConsultaModel buscarConsulta(String codigo) throws SQLException {
+        ArrayList<String[]> filas;
+        String sql = SQL_SELECT + " WHERE codigo = ?";
 
         try (Connection conexion = ConexionBDService.conectar();
              PreparedStatement ps = conexion.prepareStatement(sql)) {
@@ -258,15 +143,18 @@ public class ConsultaDAO {
             ps.setString(1, codigo);
 
             try (ResultSet resultado = ps.executeQuery()) {
-                if (resultado.next()) {
-                    return convertirConsulta(resultado);
-                }
+                filas = leerFilas(resultado);
             }
         }
 
-        return null;
+        if (filas.isEmpty()) {
+            return null;
+        }
+
+        return construirConsulta(filas.get(0));
     }
 
+    // Elimina la consulta y libera al veterinario en una sola transacción.
     public boolean eliminarConsulta(String codigo) throws SQLException {
         String sqlBuscar = "SELECT id_veterinario FROM CONSULTAS WHERE codigo = ?";
         String sqlEliminar = "DELETE FROM CONSULTAS WHERE codigo = ?";
@@ -315,15 +203,35 @@ public class ConsultaDAO {
         }
     }
 
-    private String[] convertirConsulta(ResultSet resultado) throws SQLException {
-        return new String[]{
-                resultado.getString("codigo"),
-                resultado.getString("fecha"),
-                resultado.getString("motivo"),
-                resultado.getString("animal"),
-                resultado.getString("tipo_animal"),
-                resultado.getString("veterinario"),
-                resultado.getString("recepcionista")
-        };
+    // Lee primero todas las filas para cerrar el ResultSet antes de abrir otras conexiones.
+    private ArrayList<String[]> leerFilas(ResultSet resultado) throws SQLException {
+        ArrayList<String[]> filas = new ArrayList<>();
+
+        while (resultado.next()) {
+            filas.add(new String[]{
+                    resultado.getString("codigo"),
+                    resultado.getString("fecha"),
+                    resultado.getString("motivo"),
+                    resultado.getString("id_animal"),
+                    resultado.getString("id_veterinario"),
+                    resultado.getString("id_recepcionista")
+            });
+        }
+
+        return filas;
+    }
+
+    private ConsultaModel construirConsulta(String[] fila) throws SQLException {
+        AnimalModel animal = animalDAO.buscarAnimal(fila[3]);
+        EmpleadoModel veterinario = empleadoDAO.buscarEmpleado(fila[4]);
+        EmpleadoModel recepcionista = empleadoDAO.buscarEmpleado(fila[5]);
+
+        if (animal == null
+                || !(veterinario instanceof VeterinarioModel vet)
+                || !(recepcionista instanceof RecepcionistaModel rec)) {
+            throw new SQLException("Datos inconsistentes en la consulta " + fila[0] + ".");
+        }
+
+        return new ConsultaModel(fila[0], fila[1], fila[2], animal, vet, rec);
     }
 }

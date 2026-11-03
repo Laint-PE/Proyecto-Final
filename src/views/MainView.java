@@ -1,7 +1,5 @@
 package views;
 
-import controllers.MenuConsultasController;
-
 import java.util.Scanner;
 
 public class MainView {
@@ -10,6 +8,7 @@ public class MainView {
         AnimalView animalView = new AnimalView(scanner);
         ProductoView productoView = new ProductoView(scanner);
         EmpleadoView empleadoView = new EmpleadoView(scanner);
+        ConsultaView consultaView = new ConsultaView(scanner);
         int opcion = 0;
 
         while (opcion != 6) {
@@ -43,7 +42,7 @@ public class MainView {
                     productoView.registrarVentaDesdeMenu();
                     break;
                 case 5:
-                    new MenuConsultasController().iniciar(scanner);
+                    consultaView.iniciar();
                     break;
                 case 6:
                     System.out.println("Saliendo del sistema.");
