@@ -14,7 +14,7 @@ public class GatoModel extends AnimalModel {
                 pedigri, tipoPelaje);
 
         this.requiereTransportadora = requiereTransportadora;
-        this.temperamento = temperamento;
+        setTemperamento(temperamento);
     }
 
     public String getTemperamento() {
@@ -22,7 +22,10 @@ public class GatoModel extends AnimalModel {
     }
 
     public void setTemperamento(String temperamento) {
-        this.temperamento = temperamento;
+        if (temperamento == null || temperamento.isBlank()) {
+            throw new IllegalArgumentException("El campo temperamento no puede estar vacío.");
+        }
+        this.temperamento = temperamento.trim();
     }
 
     public boolean isRequiereTransportadora() {

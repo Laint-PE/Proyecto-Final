@@ -1,16 +1,43 @@
 package services;
 
-
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Properties;
 
+/**
+ * Crea las conexiones JDBC a MySQL.
+ * Si existe un archivo "db.properties" en la carpeta del proyecto, toma de ahí
+ * la URL, el usuario y la contraseña. Si no existe, usa los valores por defecto
+ * de XAMPP (root sin contraseña), así el proyecto funciona sin configurar nada.
+ */
 public class ConexionBDService {
 
+    private static final String URL_POR_DEFECTO =
+            "jdbc:mysql://localhost:3306/veterinaria?createDatabaseIfNotExist=true";
+    private static final String USUARIO_POR_DEFECTO = "root";
+    private static final String PASSWORD_POR_DEFECTO = "";
 
-    private static final String URL = "jdbc:mysql://localhost:3306/veterinaria?createDatabaseIfNotExist=true";
-    private static final String USUARIO = "root";
-    private static final String PASSWORD = "";
+    private static final Properties CONFIG = cargarConfiguracion();
+
+    private static Properties cargarConfiguracion() {
+        Properties propiedades = new Properties();
+        Path archivo = Path.of("db.properties");
+
+        if (Files.exists(archivo)) {
+            try (InputStream entrada = Files.newInputStream(archivo)) {
+                propiedades.load(entrada);
+            } catch (IOException e) {
+                System.out.println("No se pudo leer db.properties. Se usará la configuración por defecto.");
+            }
+        }
+
+        return propiedades;
+    }
 
     public static Connection conectar() throws SQLException {
         try {
@@ -18,6 +45,11 @@ public class ConexionBDService {
         } catch (ClassNotFoundException e) {
             throw new SQLException("No se encontró el controlador MySQL. Revisa la dependencia mysql-connector-j en Maven.");
         }
-        return DriverManager.getConnection(URL, USUARIO, PASSWORD);
+
+        String url = CONFIG.getProperty("db.url", URL_POR_DEFECTO);
+        String usuario = CONFIG.getProperty("db.user", USUARIO_POR_DEFECTO);
+        String password = CONFIG.getProperty("db.password", PASSWORD_POR_DEFECTO);
+
+        return DriverManager.getConnection(url, usuario, password);
     }
 }
