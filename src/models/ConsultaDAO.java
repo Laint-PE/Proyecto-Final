@@ -11,10 +11,7 @@ import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.ArrayList;
 
-/**
- * DAO de consultas. Guarda solo los códigos (claves foráneas) y reconstruye
- * el ConsultaModel completo usando AnimalDAO y EmpleadoDAO.
- */
+
 public class ConsultaDAO {
 
     private static final String SQL_SELECT = "SELECT codigo, fecha, motivo, id_animal, "
@@ -23,7 +20,6 @@ public class ConsultaDAO {
     private final AnimalDAO animalDAO = new AnimalDAO();
     private final EmpleadoDAO empleadoDAO = new EmpleadoDAO();
 
-    // Las tablas ANIMALES y EMPLEADOS deben existir antes por las claves foráneas.
     public void prepararTablas() throws SQLException {
         animalDAO.crearTabla();
         animalDAO.insertarEjemplosSiVacia();
@@ -67,7 +63,6 @@ public class ConsultaDAO {
         }
     }
 
-    // Inserta la consulta y marca al veterinario como ocupado en una sola transacción.
     public boolean registrarConsulta(ConsultaModel consulta) throws SQLException {
         String sqlInsert = "INSERT INTO CONSULTAS (codigo, fecha, motivo, id_animal, "
                 + "id_veterinario, id_recepcionista) VALUES (?, ?, ?, ?, ?, ?)";
@@ -154,7 +149,7 @@ public class ConsultaDAO {
         return construirConsulta(filas.get(0));
     }
 
-    // Elimina la consulta y libera al veterinario en una sola transacción.
+
     public boolean eliminarConsulta(String codigo) throws SQLException {
         String sqlBuscar = "SELECT id_veterinario FROM CONSULTAS WHERE codigo = ?";
         String sqlEliminar = "DELETE FROM CONSULTAS WHERE codigo = ?";
@@ -203,7 +198,7 @@ public class ConsultaDAO {
         }
     }
 
-    // Lee primero todas las filas para cerrar el ResultSet antes de abrir otras conexiones.
+
     private ArrayList<String[]> leerFilas(ResultSet resultado) throws SQLException {
         ArrayList<String[]> filas = new ArrayList<>();
 

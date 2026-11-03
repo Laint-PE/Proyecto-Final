@@ -10,10 +10,7 @@ import services.UtilidadesService;
 import java.sql.SQLException;
 import java.util.Scanner;
 
-/**
- * Vista de consola para empleados.
- * Aquí viven Scanner y System.out. Los datos se envían al controlador.
- */
+
 public class EmpleadoView {
 
     private static final int VETERINARIO = 1;
@@ -72,7 +69,6 @@ public class EmpleadoView {
         }
 
         try {
-            // Un veterinario nuevo siempre empieza disponible.
             EmpleadoModel empleado = leerDatosEmpleado(tipo, null, true);
 
             if (controlador.registrar(empleado)) {
@@ -92,7 +88,6 @@ public class EmpleadoView {
         }
     }
 
-    // Si codigoExistente es null, pide el código (registro); si no, lo reutiliza (actualización).
     private EmpleadoModel leerDatosEmpleado(int tipo, String codigoExistente, boolean disponible) {
         String codigo = (codigoExistente == null)
                 ? UtilidadesService.leerTextoObligatorio(scanner, "Código del empleado (ej. EMP006): ")
@@ -171,7 +166,6 @@ public class EmpleadoView {
                 return;
             }
 
-            // El tipo no se cambia; "disponible" se conserva porque lo manejan las consultas.
             int tipo = RECEPCIONISTA;
             boolean disponible = true;
 

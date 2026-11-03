@@ -9,12 +9,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 
-/**
- * Crea las conexiones JDBC a MySQL.
- * Si existe un archivo "db.properties" en la carpeta del proyecto, toma de ahí
- * la URL, el usuario y la contraseña. Si no existe, usa los valores por defecto
- * de XAMPP (root sin contraseña), así el proyecto funciona sin configurar nada.
- */
+
 public class ConexionBDService {
 
     private static final String URL_POR_DEFECTO =

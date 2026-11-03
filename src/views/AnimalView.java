@@ -10,10 +10,7 @@ import services.UtilidadesService;
 import java.sql.SQLException;
 import java.util.Scanner;
 
-/**
- * Vista de consola para animales.
- * Aquí viven Scanner y System.out. Los datos se envían al controlador.
- */
+
 public class AnimalView {
 
     private final Scanner scanner;
@@ -78,7 +75,6 @@ public class AnimalView {
         }
     }
 
-    // Si codigoExistente es null, pide el código (registro); si no, lo reutiliza (actualización).
     private AnimalModel leerDatosAnimal(String codigoExistente) {
         System.out.println("\nTipo de animal:");
         System.out.println("1. Perro");

@@ -14,13 +14,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * Controlador de consultas.
- * Mantiene una colección temporal (ArrayList) con los objetos recuperados de la BD.
- * El CRUD se ejecuta directamente en la BD mediante ConsultaDAO (JDBC).
- * También entrega a la vista los animales, veterinarios y recepcionistas
- * necesarios para armar una consulta. No imprime ni lee datos del usuario.
- */
+
 public class ConsultaController {
 
     private final ConsultaDAO dao = new ConsultaDAO();
@@ -28,19 +22,16 @@ public class ConsultaController {
     private final EmpleadoDAO empleadoDAO = new EmpleadoDAO();
     private final ArrayList<ConsultaModel> consultas = new ArrayList<>();
 
-    // Prepara las tablas necesarias y llena la colección.
     public void inicializar() throws SQLException {
         dao.prepararTablas();
         cargarDesdeBD();
     }
 
-    // Vacía la colección y la vuelve a llenar con lo que hay en la BD.
     public void cargarDesdeBD() throws SQLException {
         consultas.clear();
         consultas.addAll(dao.listarConsultas());
     }
 
-    // Devuelve la colección en modo solo lectura.
     public List<ConsultaModel> getConsultas() {
         return Collections.unmodifiableList(consultas);
     }
@@ -49,12 +40,11 @@ public class ConsultaController {
         return dao.existeConsulta(codigo);
     }
 
-    // Busca directamente en la BD para tener el dato más reciente.
     public ConsultaModel buscar(String codigo) throws SQLException {
         return dao.buscarConsulta(codigo);
     }
 
-    // --- Datos de apoyo para armar una consulta ---
+
 
     public List<AnimalModel> listarAnimales() throws SQLException {
         return animalDAO.listarAnimales();
@@ -76,7 +66,6 @@ public class ConsultaController {
         return disponibles;
     }
 
-    // Devuelve null si no existe, no es veterinario o está ocupado.
     public VeterinarioModel buscarVeterinarioDisponible(String codigo) throws SQLException {
         EmpleadoModel empleado = empleadoDAO.buscarEmpleado(codigo);
 
@@ -99,7 +88,6 @@ public class ConsultaController {
         return recepcionistas;
     }
 
-    // Devuelve null si no existe o no es recepcionista.
     public RecepcionistaModel buscarRecepcionista(String codigo) throws SQLException {
         EmpleadoModel empleado = empleadoDAO.buscarEmpleado(codigo);
 
@@ -110,10 +98,6 @@ public class ConsultaController {
         return null;
     }
 
-    // --- Operaciones principales ---
-
-    // La regla de negocio vive en el modelo: consulta.registrarConsulta() ocupa al veterinario.
-    // Luego el DAO guarda la consulta y el cambio de disponibilidad en una transacción.
     public boolean registrar(ConsultaModel consulta) throws SQLException {
         if (!consulta.registrarConsulta()) {
             return false;

@@ -10,12 +10,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 
-/**
- * DAO de empleados. La tabla EMPLEADOS guarda a Veterinarios y Recepcionistas
- * en una sola tabla; la columna "tipo" decide qué modelo se construye.
- * Las columnas especialidad / disponible / turno son NULL cuando no aplican.
- * El sueldo NO se guarda: lo calcula cada modelo con calcularSueldo().
- */
+
 public class EmpleadoDAO {
 
     public static final String TIPO_VETERINARIO = "Veterinario";
@@ -151,7 +146,6 @@ public class EmpleadoDAO {
         }
     }
 
-    // No cambia el tipo ni "disponible": esa columna la controlan las consultas.
     public boolean actualizarEmpleado(EmpleadoModel empleado) throws SQLException {
         String sql = "UPDATE EMPLEADOS SET nombre = ?, dni = ?, telefono = ?, "
                 + "tiempo_completo = ?, especialidad = ?, turno = ? WHERE id_empleado = ?";

@@ -1,19 +1,9 @@
--- =========================================================
--- INSTALACION INICIAL - SISTEMA DE VETERINARIA
--- Compatible con los DAO actuales del proyecto Java.
--- Ejecutar en MySQL Workbench sobre una base nueva.
--- NO es un script de migracion: no modifica tablas existentes.
--- =========================================================
-
 CREATE DATABASE IF NOT EXISTS veterinaria
     CHARACTER SET utf8mb4
     COLLATE utf8mb4_unicode_ci;
 
 USE veterinaria;
 
--- ---------------------------------------------------------
--- PRODUCTOS
--- ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS PRODUCTOS (
     codigo VARCHAR(50) PRIMARY KEY,
     tipo VARCHAR(20) NOT NULL,
@@ -37,9 +27,7 @@ CREATE TABLE IF NOT EXISTS PRODUCTOS (
     desmontable TINYINT
 ) ENGINE=InnoDB;
 
--- ---------------------------------------------------------
--- ANIMALES
--- ---------------------------------------------------------
+
 CREATE TABLE IF NOT EXISTS ANIMALES (
     codigo VARCHAR(50) PRIMARY KEY,
     tipo_animal VARCHAR(20) NOT NULL,
@@ -57,11 +45,7 @@ CREATE TABLE IF NOT EXISTS ANIMALES (
     temperamento VARCHAR(100)
 ) ENGINE=InnoDB;
 
--- ---------------------------------------------------------
--- EMPLEADOS
--- Veterinarios y recepcionistas se almacenan en una tabla.
--- Columnas especificas quedan NULL cuando no corresponden.
--- ---------------------------------------------------------
+
 CREATE TABLE IF NOT EXISTS EMPLEADOS (
     id_empleado VARCHAR(50) PRIMARY KEY,
     tipo VARCHAR(20) NOT NULL,
@@ -74,10 +58,7 @@ CREATE TABLE IF NOT EXISTS EMPLEADOS (
     turno VARCHAR(50) NULL
 ) ENGINE=InnoDB;
 
--- ---------------------------------------------------------
--- CONSULTAS
--- Se crea al final porque depende de ANIMALES y EMPLEADOS.
--- ---------------------------------------------------------
+
 CREATE TABLE IF NOT EXISTS CONSULTAS (
     codigo VARCHAR(50) PRIMARY KEY,
     fecha DATE NOT NULL,
@@ -93,10 +74,7 @@ CREATE TABLE IF NOT EXISTS CONSULTAS (
         FOREIGN KEY (id_recepcionista) REFERENCES EMPLEADOS(id_empleado)
 ) ENGINE=InnoDB;
 
--- ---------------------------------------------------------
--- DATOS DE EJEMPLO
--- INSERT IGNORE evita insertar de nuevo códigos ya existentes.
--- ---------------------------------------------------------
+
 
 INSERT IGNORE INTO PRODUCTOS
 (codigo, tipo, nombre, precio, stock, descripcion, marca, activo,
@@ -155,6 +133,3 @@ VALUES
  0, 'Cirugía', 1, NULL),
 ('EMP004', 'Recepcionista', 'María Rojas', '40456789', '976543210',
  0, NULL, NULL, 'Tarde');
-
--- No se insertan consultas de ejemplo para evitar ocupar
--- veterinarios desde el inicio. La aplicación las registra.

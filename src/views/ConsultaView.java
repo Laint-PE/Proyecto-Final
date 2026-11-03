@@ -14,10 +14,7 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Scanner;
 
-/**
- * Vista de consola para consultas.
- * Aquí viven Scanner y System.out. Los datos se envían al controlador.
- */
+
 public class ConsultaView {
 
     private final Scanner scanner;
@@ -67,7 +64,6 @@ public class ConsultaView {
                 return;
             }
 
-            // 1. Animal
             List<AnimalModel> animales = controlador.listarAnimales();
 
             if (animales.isEmpty()) {
@@ -89,7 +85,6 @@ public class ConsultaView {
                 return;
             }
 
-            // 2. Veterinario disponible
             List<VeterinarioModel> veterinarios = controlador.listarVeterinariosDisponibles();
 
             if (veterinarios.isEmpty()) {
@@ -111,7 +106,6 @@ public class ConsultaView {
                 return;
             }
 
-            // 3. Recepcionista
             List<RecepcionistaModel> recepcionistas = controlador.listarRecepcionistas();
 
             if (recepcionistas.isEmpty()) {
@@ -133,7 +127,6 @@ public class ConsultaView {
                 return;
             }
 
-            // 4. Fecha y motivo
             LocalDate fecha = leerFecha();
             String motivo = UtilidadesService.leerTextoObligatorio(scanner, "Motivo: ");
 

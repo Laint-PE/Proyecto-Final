@@ -11,10 +11,7 @@ import services.UtilidadesService;
 import java.sql.SQLException;
 import java.util.Scanner;
 
-/**
- * Vista de consola para productos.
- * Aquí viven Scanner y System.out. Los datos se envían al controlador.
- */
+
 public class ProductoView {
 
     private final Scanner scanner;
@@ -59,7 +56,6 @@ public class ProductoView {
         }
     }
 
-    // Opción 4 del menú principal: venta directa.
     public void registrarVentaDesdeMenu() {
         try {
             controlador.inicializar();

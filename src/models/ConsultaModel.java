@@ -1,6 +1,5 @@
 package models;
 
-
 public class ConsultaModel {
     private String codigo;
     private String fecha;
